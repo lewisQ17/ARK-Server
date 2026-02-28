@@ -1,7 +1,11 @@
-# Map Configuration: Extinction
+# Map Configuration Template
+# Copy this to maps/<YourMap>/map.conf and edit the values
+#
+# Example: cp templates/map.conf.example maps/Extinction/map.conf
+
 MapName=Extinction_WP
 DisplayName=Extinction
-SaveDir=ARK-ex
+SaveDir=Extinction
 GamePort=7777
 QueryPort=27015
 RCONPort=27020
@@ -11,3 +15,4 @@ ServerPassword=
 ModIDs=
 CustomStartParams=-NoBattlEye -crossplay -NoHangDetection
 ClusterID=
+GraphicsPreset=high

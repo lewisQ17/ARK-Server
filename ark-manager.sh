@@ -543,7 +543,7 @@ ClusterID=$(read_conf_value "$DEFAULTS_CONF" "ClusterID" "")
 EOF
 
     # Copy/create GameUserSettings.ini with optimized defaults
-    create_optimized_game_settings "$MAPS_DIR/$display_name"
+    create_optimized_game_settings "$MAPS_DIR/$display_name" "high"
 
     # Create empty Game.ini
     if [[ ! -f "$MAPS_DIR/$display_name/Game.ini" ]]; then
@@ -565,7 +565,13 @@ EOF
 
 create_optimized_game_settings() {
     local map_dir="$1"
+    local preset="${2:-high}"   # Graphics preset: low, medium, high, auto
     local ini_file="$map_dir/GameUserSettings.ini"
+
+    # Store preset in map.conf
+    if [[ -f "$map_dir/map.conf" ]]; then
+        write_conf_value "$map_dir/map.conf" "GraphicsPreset" "$preset"
+    fi
 
     # Load rates from defaults
     local xp taming harvest respawn mating baby hatch
@@ -623,61 +629,61 @@ BabyMatureSpeedMultiplier=$baby
 EggHatchSpeedMultiplier=$hatch
 
 [ScalabilityGroups]
-sg.ResolutionQuality=0
-sg.ViewDistanceQuality=0
-sg.AntiAliasingQuality=0
-sg.ShadowQuality=0
-sg.GlobalIlluminationQuality=0
-sg.ReflectionQuality=0
-sg.PostProcessQuality=0
-sg.TextureQuality=0
-sg.EffectsQuality=0
-sg.FoliageQuality=0
-sg.ShadingQuality=0
-sg.LandscapeQuality=0
+sg.ResolutionQuality=3
+sg.ViewDistanceQuality=3
+sg.AntiAliasingQuality=3
+sg.ShadowQuality=3
+sg.GlobalIlluminationQuality=3
+sg.ReflectionQuality=3
+sg.PostProcessQuality=3
+sg.TextureQuality=3
+sg.EffectsQuality=3
+sg.FoliageQuality=3
+sg.ShadingQuality=3
+sg.LandscapeQuality=3
 
 [/Script/ShooterGame.ShooterGameUserSettings]
-AdvancedGraphicsQuality=0
+AdvancedGraphicsQuality=3
 MasterAudioVolume=0
 SFXAudioVolume=0
 MusicAudioVolume=0
 bFilmGrain=False
 bUserMotionBlur=False
-bUseDFAO=False
-bUseSSAO=False
-bDisableBloom=True
-bUseDistanceFieldAmbientOcclusion=False
-bHighQualityAnisotropicFiltering=False
-bEnableFootstepDecals=False
-bEnableFootstepParticles=False
-bEnableFluidInteraction=False
+bUseDFAO=True
+bUseSSAO=True
+bDisableBloom=False
+bUseDistanceFieldAmbientOcclusion=True
+bHighQualityAnisotropicFiltering=True
+bEnableFootstepDecals=True
+bEnableFootstepParticles=True
+bEnableFluidInteraction=True
 bDisableHLOD=False
-bLowQualityVFX=True
-PreventDetailGraphics=True
-GroundClutterDensity=0
-GroundClutterRadius=0
-HFSQuality=0
-LODScalar=0.5
-HighQualityMaterials=False
-HighQualitySurfaces=False
-bHighQualityLODs=False
-bExtraLevelStreamingDistance=False
-bEnableColorGrading=False
-ScreenPercentage=0.100000
-ResolutionSizeX=640
-ResolutionSizeY=480
-FrameRateLimit=30.000000
+bLowQualityVFX=False
+PreventDetailGraphics=False
+GroundClutterDensity=100
+GroundClutterRadius=10000
+HFSQuality=3
+LODScalar=1.0
+HighQualityMaterials=True
+HighQualitySurfaces=True
+bHighQualityLODs=True
+bExtraLevelStreamingDistance=True
+bEnableColorGrading=True
+ScreenPercentage=100.000000
+ResolutionSizeX=1920
+ResolutionSizeY=1080
+FrameRateLimit=0.000000
 bUseVSync=False
 bUseDynamicResolution=False
-bUseLowQualityLevelStreaming=True
-FoliageInteractionDistance=0.010000
-FoliageInteractionDistanceLimit=0.100000
-FoliageInteractionQuantityLimit=0.100000
-GUI3DWidgetQuality=0.000000
-AudioQualityLevel=0
-ActiveLingeringWorldTiles=5
+bUseLowQualityLevelStreaming=False
+FoliageInteractionDistance=1.000000
+FoliageInteractionDistanceLimit=1.000000
+FoliageInteractionQuantityLimit=1.000000
+GUI3DWidgetQuality=100.000000
+AudioQualityLevel=2
+ActiveLingeringWorldTiles=20
 ClientNetQuality=3
-bDisableShadows=True
+bDisableShadows=False
 
 [SessionSettings]
 SessionName=${map_name}
@@ -688,6 +694,163 @@ MaxPlayers=$max_players
 [/Script/Engine.GameUserSettings]
 bUseDesiredScreenHeight=False
 GUSEOF
+}
+
+#═══════════════════════════════════════════════════════════════════════════════
+#  GRAPHICS PRESET MANAGEMENT
+#═══════════════════════════════════════════════════════════════════════════════
+
+apply_graphics_preset() {
+    local map="$1"
+    local preset="$2"
+    local ini="$MAPS_DIR/$map/GameUserSettings.ini"
+
+    if [[ ! -f "$ini" ]]; then
+        log_err "GameUserSettings.ini not found for '$map'."
+        return 1
+    fi
+
+    local sg_val adv_q res_x res_y scr_pct fps_lim
+    local b_dfao b_ssao b_bloom b_dist_ao b_hi_aniso
+    local b_foot_dec b_foot_part b_fluid b_low_vfx b_prev_det
+    local gnd_dens gnd_rad hfs_q lod_s
+    local b_hi_mat b_hi_surf b_hi_lod b_ext_stream b_color_grad
+    local b_dyn_res b_low_stream
+    local fol_dist fol_limit fol_qty gui3d_q aud_q tiles b_dis_shad
+
+    case "$preset" in
+        low)
+            sg_val=0; adv_q=0
+            res_x=640; res_y=480; scr_pct="0.100000"; fps_lim="30.000000"
+            b_dfao=False; b_ssao=False; b_bloom=True; b_dist_ao=False
+            b_hi_aniso=False; b_foot_dec=False; b_foot_part=False; b_fluid=False
+            b_low_vfx=True; b_prev_det=True; gnd_dens=0; gnd_rad=0; hfs_q=0; lod_s="0.5"
+            b_hi_mat=False; b_hi_surf=False; b_hi_lod=False; b_ext_stream=False; b_color_grad=False
+            b_dyn_res=False; b_low_stream=True
+            fol_dist="0.010000"; fol_limit="0.100000"; fol_qty="0.100000"
+            gui3d_q="0.000000"; aud_q=0; tiles=5; b_dis_shad=True
+            ;;
+        medium)
+            sg_val=2; adv_q=2
+            res_x=1280; res_y=720; scr_pct="75.000000"; fps_lim="60.000000"
+            b_dfao=False; b_ssao=True; b_bloom=False; b_dist_ao=False
+            b_hi_aniso=False; b_foot_dec=True; b_foot_part=True; b_fluid=False
+            b_low_vfx=False; b_prev_det=False; gnd_dens=50; gnd_rad=5000; hfs_q=2; lod_s="1.0"
+            b_hi_mat=False; b_hi_surf=False; b_hi_lod=False; b_ext_stream=False; b_color_grad=True
+            b_dyn_res=False; b_low_stream=False
+            fol_dist="0.500000"; fol_limit="1.000000"; fol_qty="0.500000"
+            gui3d_q="50.000000"; aud_q=1; tiles=10; b_dis_shad=False
+            ;;
+        high)
+            sg_val=3; adv_q=3
+            res_x=1920; res_y=1080; scr_pct="100.000000"; fps_lim="0.000000"
+            b_dfao=True; b_ssao=True; b_bloom=False; b_dist_ao=True
+            b_hi_aniso=True; b_foot_dec=True; b_foot_part=True; b_fluid=True
+            b_low_vfx=False; b_prev_det=False; gnd_dens=100; gnd_rad=10000; hfs_q=3; lod_s="1.0"
+            b_hi_mat=True; b_hi_surf=True; b_hi_lod=True; b_ext_stream=True; b_color_grad=True
+            b_dyn_res=False; b_low_stream=False
+            fol_dist="1.000000"; fol_limit="1.000000"; fol_qty="1.000000"
+            gui3d_q="100.000000"; aud_q=2; tiles=20; b_dis_shad=False
+            ;;
+        auto)
+            sg_val=3; adv_q=3
+            res_x=1920; res_y=1080; scr_pct="100.000000"; fps_lim="0.000000"
+            b_dfao=True; b_ssao=True; b_bloom=False; b_dist_ao=True
+            b_hi_aniso=True; b_foot_dec=True; b_foot_part=True; b_fluid=True
+            b_low_vfx=False; b_prev_det=False; gnd_dens=100; gnd_rad=10000; hfs_q=3; lod_s="1.0"
+            b_hi_mat=True; b_hi_surf=True; b_hi_lod=True; b_ext_stream=True; b_color_grad=True
+            b_dyn_res=True; b_low_stream=False
+            fol_dist="1.000000"; fol_limit="1.000000"; fol_qty="1.000000"
+            gui3d_q="100.000000"; aud_q=2; tiles=20; b_dis_shad=False
+            ;;
+        *)
+            log_err "Unknown preset: $preset (use: low, medium, high, auto)"
+            return 1
+            ;;
+    esac
+
+    # Update ScalabilityGroups
+    for key in ResolutionQuality ViewDistanceQuality AntiAliasingQuality ShadowQuality \
+               GlobalIlluminationQuality ReflectionQuality PostProcessQuality TextureQuality \
+               EffectsQuality FoliageQuality ShadingQuality LandscapeQuality; do
+        sed -i "s/^sg\.${key}=.*/sg.${key}=$sg_val/" "$ini"
+    done
+
+    # Update ShooterGameUserSettings
+    sed -i "s/^AdvancedGraphicsQuality=.*/AdvancedGraphicsQuality=$adv_q/" "$ini"
+    sed -i "s/^bUseDFAO=.*/bUseDFAO=$b_dfao/" "$ini"
+    sed -i "s/^bUseSSAO=.*/bUseSSAO=$b_ssao/" "$ini"
+    sed -i "s/^bDisableBloom=.*/bDisableBloom=$b_bloom/" "$ini"
+    sed -i "s/^bUseDistanceFieldAmbientOcclusion=.*/bUseDistanceFieldAmbientOcclusion=$b_dist_ao/" "$ini"
+    sed -i "s/^bHighQualityAnisotropicFiltering=.*/bHighQualityAnisotropicFiltering=$b_hi_aniso/" "$ini"
+    sed -i "s/^bEnableFootstepDecals=.*/bEnableFootstepDecals=$b_foot_dec/" "$ini"
+    sed -i "s/^bEnableFootstepParticles=.*/bEnableFootstepParticles=$b_foot_part/" "$ini"
+    sed -i "s/^bEnableFluidInteraction=.*/bEnableFluidInteraction=$b_fluid/" "$ini"
+    sed -i "s/^bLowQualityVFX=.*/bLowQualityVFX=$b_low_vfx/" "$ini"
+    sed -i "s/^PreventDetailGraphics=.*/PreventDetailGraphics=$b_prev_det/" "$ini"
+    sed -i "s/^GroundClutterDensity=.*/GroundClutterDensity=$gnd_dens/" "$ini"
+    sed -i "s/^GroundClutterRadius=.*/GroundClutterRadius=$gnd_rad/" "$ini"
+    sed -i "s/^HFSQuality=.*/HFSQuality=$hfs_q/" "$ini"
+    sed -i "s/^LODScalar=.*/LODScalar=$lod_s/" "$ini"
+    sed -i "s/^HighQualityMaterials=.*/HighQualityMaterials=$b_hi_mat/" "$ini"
+    sed -i "s/^HighQualitySurfaces=.*/HighQualitySurfaces=$b_hi_surf/" "$ini"
+    sed -i "s/^bHighQualityLODs=.*/bHighQualityLODs=$b_hi_lod/" "$ini"
+    sed -i "s/^bExtraLevelStreamingDistance=.*/bExtraLevelStreamingDistance=$b_ext_stream/" "$ini"
+    sed -i "s/^bEnableColorGrading=.*/bEnableColorGrading=$b_color_grad/" "$ini"
+    sed -i "s/^ScreenPercentage=.*/ScreenPercentage=$scr_pct/" "$ini"
+    sed -i "s/^ResolutionSizeX=.*/ResolutionSizeX=$res_x/" "$ini"
+    sed -i "s/^ResolutionSizeY=.*/ResolutionSizeY=$res_y/" "$ini"
+    sed -i "s/^FrameRateLimit=.*/FrameRateLimit=$fps_lim/" "$ini"
+    sed -i "s/^bUseDynamicResolution=.*/bUseDynamicResolution=$b_dyn_res/" "$ini"
+    sed -i "s/^bUseLowQualityLevelStreaming=.*/bUseLowQualityLevelStreaming=$b_low_stream/" "$ini"
+    sed -i "s/^FoliageInteractionDistance=.*/FoliageInteractionDistance=$fol_dist/" "$ini"
+    sed -i "s/^FoliageInteractionDistanceLimit=.*/FoliageInteractionDistanceLimit=$fol_limit/" "$ini"
+    sed -i "s/^FoliageInteractionQuantityLimit=.*/FoliageInteractionQuantityLimit=$fol_qty/" "$ini"
+    sed -i "s/^GUI3DWidgetQuality=.*/GUI3DWidgetQuality=$gui3d_q/" "$ini"
+    sed -i "s/^AudioQualityLevel=.*/AudioQualityLevel=$aud_q/" "$ini"
+    sed -i "s/^ActiveLingeringWorldTiles=.*/ActiveLingeringWorldTiles=$tiles/" "$ini"
+    sed -i "s/^bDisableShadows=.*/bDisableShadows=$b_dis_shad/" "$ini"
+
+    # Store preset in map.conf
+    if [[ -f "$MAPS_DIR/$map/map.conf" ]]; then
+        write_conf_value "$MAPS_DIR/$map/map.conf" "GraphicsPreset" "$preset"
+    fi
+
+    log_ok "Graphics preset '${BOLD}$preset${R}${GRN}' applied to $map. Restart to take effect."
+}
+
+graphics_preset_menu() {
+    local map="$1"
+    local conf="$MAPS_DIR/$map/map.conf"
+    local current_preset
+    current_preset=$(read_conf_value "$conf" "GraphicsPreset" "high")
+
+    echo
+    echo -e "  ${BOLD}Graphics Preset — $map${R}"
+    separator
+    echo -e "  Current preset: ${BOLD}${CYN}$current_preset${R}"
+    echo
+    echo -e "  ${CYN}1${R}) ${RED}Low${R}        ${DIM}— Max performance, all effects off, 640x480, 30fps cap${R}"
+    echo -e "  ${CYN}2${R}) ${YEL}Medium${R}     ${DIM}— Balanced, basic effects, 1280x720, 60fps cap${R}"
+    echo -e "  ${CYN}3${R}) ${GRN}High${R}       ${DIM}— Max quality, all effects on, 1920x1080, unlimited fps${R}"
+    echo -e "  ${CYN}4${R}) ${BLU}Auto${R}       ${DIM}— High quality + dynamic resolution (auto-adjusts live!)${R}"
+    echo -e "  ${CYN}5${R}) Back"
+    echo
+    echo -e "  ${DIM}Note: With -NullRHI (headless mode), the server does not render graphics.${R}"
+    echo -e "  ${DIM}These settings affect quality values stored in GameUserSettings.ini.${R}"
+    echo -e "  ${DIM}To disable headless mode, edit optimization.conf → UseNullRHI=false${R}"
+    echo
+    echo -ne "  Choice: "
+    read -r choice
+
+    case "$choice" in
+        1) apply_graphics_preset "$map" "low" ;;
+        2) apply_graphics_preset "$map" "medium" ;;
+        3) apply_graphics_preset "$map" "high" ;;
+        4) apply_graphics_preset "$map" "auto" ;;
+        5) return ;;
+        *) log_err "Invalid choice." ;;
+    esac
 }
 
 create_systemd_service() {
@@ -1061,10 +1224,11 @@ server_settings_menu() {
         printf "  ${CYN}10${R}) Auto-Save Interval (min)    : ${WHT}%s${R}\n" "$auto_save"
         printf "  ${CYN}11${R}) Max Structures In Range     : ${WHT}%s${R}\n" "$max_struct"
         echo
-        printf "  ${CYN}12${R}) Edit GameUserSettings.ini   ${DIM}(advanced)${R}\n"
-        printf "  ${CYN}13${R}) Edit Game.ini               ${DIM}(advanced)${R}\n"
-        printf "  ${CYN}14${R}) Edit map.conf               ${DIM}(ports/passwords/params)${R}\n"
-        printf "  ${CYN}15${R}) Back\n"
+        printf "  ${CYN}12${R}) Graphics Preset              ${DIM}(low/medium/high/auto)${R}\n"
+        printf "  ${CYN}13${R}) Edit GameUserSettings.ini   ${DIM}(advanced)${R}\n"
+        printf "  ${CYN}14${R}) Edit Game.ini               ${DIM}(advanced)${R}\n"
+        printf "  ${CYN}15${R}) Edit map.conf               ${DIM}(ports/passwords/params)${R}\n"
+        printf "  ${CYN}16${R}) Back\n"
         echo
         echo -ne "  Choice: "
         read -r choice
@@ -1081,10 +1245,11 @@ server_settings_menu() {
             9)  echo -ne "  New Max Tamed Dinos: "; read -r val; write_conf_value "$gus" "MaxTamedDinos" "$val" ;;
             10) echo -ne "  New Auto-Save (minutes): "; read -r val; write_conf_value "$gus" "AutoSavePeriodMinutes" "$val" ;;
             11) echo -ne "  New Max Structures: "; read -r val; write_conf_value "$gus" "TheMaxStructuresInRange" "$val" ;;
-            12) ${EDITOR:-nano} "$gus" ;;
-            13) ${EDITOR:-nano} "$MAPS_DIR/$map/Game.ini" ;;
-            14) ${EDITOR:-nano} "$MAPS_DIR/$map/map.conf" ;;
-            15) return ;;
+            12) graphics_preset_menu "$map" ;;
+            13) ${EDITOR:-nano} "$gus" ;;
+            14) ${EDITOR:-nano} "$MAPS_DIR/$map/Game.ini" ;;
+            15) ${EDITOR:-nano} "$MAPS_DIR/$map/map.conf" ;;
+            16) return ;;
             *)  log_err "Invalid choice." ;;
         esac
         [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= 11 )) && log_ok "Setting saved. Restart to apply."

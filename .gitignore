@@ -9,6 +9,11 @@ maps/*/server.log
 healthcheck.log
 restart.log
 
+# Per-deployment configs (contain passwords — use templates/)
+maps/*/map.conf
+maps/*/GameUserSettings.ini
+maps/*/Game.ini
+
 # OS
 .DS_Store
 Thumbs.db
