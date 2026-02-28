@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #═══════════════════════════════════════════════════════════════════════════════
-#  ARK: Survival Ascended — Linux Server Manager  v2.1
+#  ARK: Survival Ascended — Linux Server Manager  v2.2
 #  A clean, map-centered management tool for ASA dedicated servers.
 #  https://github.com/lewisQ17/ARK-Server
 #═══════════════════════════════════════════════════════════════════════════════
 set -u
 
-VERSION="2.1"
+VERSION="2.2"
 export LC_ALL=C.UTF-8 LANG=C.UTF-8
 
 #───────────────────────────── Paths ──────────────────────────────────────────
@@ -75,8 +75,13 @@ log_err()   { echo "${RED}${BLD}  ✖ ${R} $*"; }
 separator() { echo "  ${GRY}──────────────────────────────────────────────────────────────────────────────${R}"; }
 thin_sep()  { echo "  ${GRY}╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌${R}"; }
 
-# Pad text to exact visible width (for column alignment)
-pad() { printf "%-${1}s" "${2:0:$1}"; }
+# Pad text to exact visible display width (handles multi-byte chars correctly)
+pad() {
+    local w="$1" t="${2:0:$1}"
+    printf "%s" "$t"
+    local n=$(( w - ${#t} ))
+    (( n > 0 )) && printf "%*s" "$n" ""
+}
 
 confirm() {
     local msg="${1:-Continue?}"
@@ -254,13 +259,24 @@ get_map_pid() {
 get_player_count() {
     local map="$1"
     is_map_running "$map" || { echo "0"; return; }
+    # Cache for 30 seconds (RCON call is slow)
+    local cache_file="/tmp/.ark-players-${map}"
+    if [[ -f "$cache_file" ]]; then
+        local age
+        age=$(( $(date +%s) - $(stat -c %Y "$cache_file" 2>/dev/null || echo 0) ))
+        if (( age < 30 )); then
+            cat "$cache_file"
+            return
+        fi
+    fi
     local rcon_port admin_pw
     rcon_port=$(read_conf_value "$MAPS_DIR/$map/map.conf" "RCONPort" "27020")
     admin_pw=$(read_conf_value "$MAPS_DIR/$map/map.conf" "AdminPassword" "")
     [[ -z "$admin_pw" ]] && admin_pw=$(read_conf_value "$DEFAULTS_CONF" "DefaultAdminPassword" "")
     local count
-    count=$(python3 "$RCON_SCRIPT" "localhost:$rcon_port" -p "$admin_pw" -c "ListPlayers" 2>/dev/null | grep -c "^[0-9]" || true)
-    echo "${count:-0}"
+    count=$(timeout 5 python3 "$RCON_SCRIPT" "localhost:$rcon_port" -p "$admin_pw" -c "ListPlayers" 2>/dev/null | grep -c "^[0-9]" || true)
+    count="${count:-0}"
+    echo "$count" | tee "$cache_file"
 }
 
 check_map_health() {
@@ -355,24 +371,56 @@ get_map_cpu() {
     echo "${total:-0}%"
 }
 
-# Check if server is joinable — all 3 ports (game/query/rcon) must be listening
+# Check if server is externally joinable (real network test, cached 15s)
 check_server_queryable() {
     local map="$1"
     is_map_running "$map" || { echo "-"; return; }
+
+    # Cache result for 15 seconds
+    local cache_file="/tmp/.ark-join-${map}"
+    if [[ -f "$cache_file" ]]; then
+        local age
+        age=$(( $(date +%s) - $(stat -c %Y "$cache_file" 2>/dev/null || echo 0) ))
+        if (( age < 15 )); then
+            cat "$cache_file"
+            return
+        fi
+    fi
+
     local game_port query_port rcon_port
     game_port=$(read_conf_value "$MAPS_DIR/$map/map.conf" "GamePort" "7777")
     query_port=$(read_conf_value "$MAPS_DIR/$map/map.conf" "QueryPort" "27015")
     rcon_port=$(read_conf_value "$MAPS_DIR/$map/map.conf" "RCONPort" "27020")
-    if ss -lunp 2>/dev/null | grep -q ":${game_port} " && \
-       ss -lunp 2>/dev/null | grep -q ":${query_port} " && \
-       ss -tlnp 2>/dev/null | grep -q ":${rcon_port} "; then
-        echo "YES"
-    else
-        echo "NO"
+
+    local server_ip
+    server_ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+    [[ -z "$server_ip" ]] && { echo "?" | tee "$cache_file"; return; }
+
+    local result="YES"
+
+    # 1) All ports must be bound on 0.0.0.0 (accessible from network)
+    ss -lunp 2>/dev/null | grep ":${game_port} " | grep -q "0\.0\.0\.0" || result="NO"
+    [[ "$result" == "YES" ]] && { ss -lunp 2>/dev/null | grep ":${query_port} " | grep -q "0\.0\.0\.0" || result="NO"; }
+    [[ "$result" == "YES" ]] && { ss -tlnp 2>/dev/null | grep ":${rcon_port} " | grep -q "0\.0\.0\.0" || result="NO"; }
+
+    # 2) Firewall must allow game port
+    if [[ "$result" == "YES" ]] && command -v ufw &>/dev/null; then
+        local ufw_out
+        ufw_out=$(sudo -n ufw status 2>/dev/null || echo "")
+        if echo "$ufw_out" | grep -q "Status: active"; then
+            echo "$ufw_out" | grep -qE "${game_port}" || result="NO"
+        fi
     fi
+
+    # 3) TCP connect to RCON on server's network IP (proves real reachability)
+    if [[ "$result" == "YES" ]]; then
+        timeout 1 bash -c "echo >/dev/tcp/${server_ip}/${rcon_port}" 2>/dev/null || result="NO"
+    fi
+
+    echo "$result" | tee "$cache_file"
 }
 
-# Check if map is included in batch start/stop
+# Check if map is included in groep start/stop
 is_batch_enabled() {
     local map="$1"
     local val
@@ -388,7 +436,7 @@ is_autostart_enabled() {
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
-#  DASHBOARD (always shown with menu, auto-refreshes)
+#  DASHBOARD (live — refreshes every 2s, options always visible)
 #═══════════════════════════════════════════════════════════════════════════════
 
 show_dashboard() {
@@ -419,39 +467,33 @@ show_dashboard() {
     if (( ${#maps[@]} == 0 )); then
         echo "  ${DIM}No maps configured yet. Use ${WHT}Add Map${DIM} to get started.${R}"
     else
-        # Table header — each column has a fixed visible width
-        printf "  ${BLD}${WHT}%s %s %s %s %s %s %s %s${R}\n" \
-            "$(pad 15 "MAP")" "$(pad 10 "STATUS")" "$(pad 10 "HEALTH")" \
-            "$(pad 9 "PLAYERS")" "$(pad 8 "UPTIME")" "$(pad 8 "RAM")" \
-            "$(pad 6 "CPU")" "$(pad 6 "JOIN")"
+        # Table header — fixed column widths for perfect alignment
+        printf "  ${BLD}${WHT}%s %s %s %s %s %s %s %s %s${R}\n" \
+            "$(pad 14 "MAP")" "$(pad 10 "STATUS")" "$(pad 9 "HEALTH")" \
+            "$(pad 8 "PLAYERS")" "$(pad 7 "UPTIME")" "$(pad 6 "RAM")" \
+            "$(pad 5 "CPU")" "$(pad 4 "JOIN")" "$(pad 4 "AUTO")"
         separator
 
         for map in "${maps[@]}"; do
-            local game_port query_port
-            game_port=$(read_conf_value "$MAPS_DIR/$map/map.conf" "GamePort" "?")
-            query_port=$(read_conf_value "$MAPS_DIR/$map/map.conf" "QueryPort" "?")
-
             # MAP column
-            local p_map; p_map=$(pad 15 "$map")
+            local p_map; p_map="$(pad 14 "$map")"
 
-            # STATUS column — colored badge
-            local status_raw status_col
+            # STATUS column
+            local status_col
             if is_map_running "$map"; then
-                status_raw=$(pad 10 "● ONLINE")
-                status_col="${GRN}${BLD}${status_raw}${R}"
+                status_col="${GRN}${BLD}$(pad 10 "● ONLINE")${R}"
             else
-                status_raw=$(pad 10 "● OFFLINE")
-                status_col="${RED}${status_raw}${R}"
+                status_col="${RED}$(pad 10 "● OFFLINE")${R}"
             fi
 
             # HEALTH column
             local health_raw health_col
             health_raw=$(check_map_health "$map")
             case "$health_raw" in
-                HEALTHY)  health_col="${GRN}$(pad 10 "$health_raw")${R}" ;;
-                DEGRADED) health_col="${YEL}$(pad 10 "$health_raw")${R}" ;;
-                CRASHED|ZOMBIE|FROZEN) health_col="${RED}$(pad 10 "$health_raw")${R}" ;;
-                *)        health_col="${DIM}$(pad 10 "$health_raw")${R}" ;;
+                HEALTHY)  health_col="${GRN}$(pad 9 "$health_raw")${R}" ;;
+                DEGRADED) health_col="${YEL}$(pad 9 "$health_raw")${R}" ;;
+                CRASHED|ZOMBIE|FROZEN) health_col="${RED}$(pad 9 "$health_raw")${R}" ;;
+                *)        health_col="${DIM}$(pad 9 "$health_raw")${R}" ;;
             esac
 
             # PLAYERS column
@@ -460,37 +502,41 @@ show_dashboard() {
                 local pc max_p
                 pc=$(get_player_count "$map" 2>/dev/null || echo "?")
                 max_p=$(read_conf_value "$MAPS_DIR/$map/map.conf" "MaxPlayers" "70")
-                p_players=$(pad 9 "${pc}/${max_p}")
+                p_players="$(pad 8 "${pc}/${max_p}")"
             else
-                p_players="${DIM}$(pad 9 "-")${R}"
+                p_players="${DIM}$(pad 8 "-")${R}"
             fi
 
             # UPTIME, RAM, CPU columns
             local p_uptime p_ram p_cpu
-            p_uptime=$(pad 8 "$(get_map_uptime "$map")")
-            p_ram=$(pad 8 "$(get_map_memory "$map")")
-            p_cpu=$(pad 6 "$(get_map_cpu "$map")")
+            p_uptime="$(pad 7 "$(get_map_uptime "$map")")"
+            p_ram="$(pad 6 "$(get_map_memory "$map")")"
+            p_cpu="$(pad 5 "$(get_map_cpu "$map")")"
 
-            # JOIN column — is server queryable?
-            local join_raw join_col
+            # JOIN column — ✔ or ✖
+            local join_col
             if is_map_running "$map"; then
+                local join_raw
                 join_raw=$(check_server_queryable "$map")
                 if [[ "$join_raw" == "YES" ]]; then
-                    join_col="${GRN}$(pad 6 "✔ YES")${R}"
+                    join_col="${GRN}$(pad 4 "✔")${R}"
                 else
-                    join_col="${RED}$(pad 6 "✖ NO")${R}"
+                    join_col="${RED}$(pad 4 "✖")${R}"
                 fi
             else
-                join_col="${DIM}$(pad 6 "-")${R}"
+                join_col="${DIM}$(pad 4 "-")${R}"
             fi
 
-            # Batch/AutoStart indicators
-            local flags=""
-            is_batch_enabled "$map" || flags+="${DIM}[skip-batch]${R} "
-            is_autostart_enabled "$map" 2>/dev/null && flags+="${DIM}[auto-start]${R} "
+            # AUTO column — YES/NO
+            local auto_col
+            if is_autostart_enabled "$map" 2>/dev/null; then
+                auto_col="${GRN}$(pad 4 "YES")${R}"
+            else
+                auto_col="${RED}$(pad 4 "NO")${R}"
+            fi
 
-            # Print row — all raw padding before color = perfect alignment
-            echo "  ${p_map} ${status_col} ${health_col} ${p_players} ${p_uptime} ${p_ram} ${p_cpu} ${join_col} ${flags}"
+            # Print row
+            echo "  ${p_map} ${status_col} ${health_col} ${p_players} ${p_uptime} ${p_ram} ${p_cpu} ${join_col} ${auto_col}"
         done
     fi
     echo ""
@@ -854,9 +900,9 @@ graphics_preset_menu() {
     thin_sep
     echo "  Current: ${BLD}${CYN}$current${R}"
     echo ""
-    echo "  ${CYN}1${R}) ${RED}Low${R}       ${DIM}— Max performance, 640×480, 30fps cap${R}"
-    echo "  ${CYN}2${R}) ${YEL}Medium${R}    ${DIM}— Balanced, 1280×720, 60fps cap${R}"
-    echo "  ${CYN}3${R}) ${GRN}High${R}      ${DIM}— Max quality, 1920×1080, unlimited fps${R}"
+    echo "  ${CYN}1${R}) ${RED}Low${R}       ${DIM}— Max performance, 640x480, 30fps cap${R}"
+    echo "  ${CYN}2${R}) ${YEL}Medium${R}    ${DIM}— Balanced, 1280x720, 60fps cap${R}"
+    echo "  ${CYN}3${R}) ${GRN}High${R}      ${DIM}— Max quality, 1920x1080, unlimited fps${R}"
     echo "  ${CYN}4${R}) ${BLU}Auto${R}      ${DIM}— High + dynamic resolution${R}"
     echo ""
     echo "  ${DIM}0) Back${R}"
@@ -1241,10 +1287,10 @@ start_all_maps() {
             ((started++))
             sleep 5
         else
-            log_info "Skipping ${BLD}$map${R} ${DIM}(batch disabled)${R}"
+            log_info "Skipping ${BLD}$map${R} ${DIM}(not in groep)${R}"
         fi
     done
-    log_ok "Started ${BLD}$started${R}${GRN} batch-enabled maps."
+    log_ok "Started ${BLD}$started${R}${GRN} maps in groep."
 }
 
 stop_all_maps() {
@@ -1255,10 +1301,10 @@ stop_all_maps() {
             stop_map "$map"
             ((stopped++))
         elif is_map_running "$map"; then
-            log_info "Skipping ${BLD}$map${R} ${DIM}(batch disabled)${R}"
+            log_info "Skipping ${BLD}$map${R} ${DIM}(not in groep)${R}"
         fi
     done
-    log_ok "Stopped ${BLD}$stopped${R}${GRN} batch-enabled maps."
+    log_ok "Stopped ${BLD}$stopped${R}${GRN} maps in groep."
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
@@ -1326,25 +1372,25 @@ server_settings_menu() {
 
         echo ""
         echo "  ${BLD}${WHT}  Multipliers${R}"
-        printf "  ${CYN} 1${R}) XP Multiplier             : ${BLD}${WHT}%s${R}\n" "$xp"
-        printf "  ${CYN} 2${R}) Taming Speed               : ${BLD}${WHT}%s${R}\n" "$taming"
-        printf "  ${CYN} 3${R}) Harvest Amount              : ${BLD}${WHT}%s${R}\n" "$harvest"
-        printf "  ${CYN} 4${R}) Resource Respawn            : ${BLD}${WHT}%s${R}\n" "$respawn"
-        printf "  ${CYN} 5${R}) Mating Interval             : ${BLD}${WHT}%s${R}\n" "$mating"
-        printf "  ${CYN} 6${R}) Baby Mature Speed           : ${BLD}${WHT}%s${R}\n" "$baby"
-        printf "  ${CYN} 7${R}) Egg Hatch Speed             : ${BLD}${WHT}%s${R}\n" "$hatch"
-        printf "  ${CYN} 8${R}) Item Stack Size             : ${BLD}${WHT}%s${R}\n" "$stack"
+        printf "  ${CYN}%2d${R}) %-30s : ${BLD}${WHT}%s${R}\n" 1 "XP Multiplier" "$xp"
+        printf "  ${CYN}%2d${R}) %-30s : ${BLD}${WHT}%s${R}\n" 2 "Taming Speed" "$taming"
+        printf "  ${CYN}%2d${R}) %-30s : ${BLD}${WHT}%s${R}\n" 3 "Harvest Amount" "$harvest"
+        printf "  ${CYN}%2d${R}) %-30s : ${BLD}${WHT}%s${R}\n" 4 "Resource Respawn" "$respawn"
+        printf "  ${CYN}%2d${R}) %-30s : ${BLD}${WHT}%s${R}\n" 5 "Mating Interval" "$mating"
+        printf "  ${CYN}%2d${R}) %-30s : ${BLD}${WHT}%s${R}\n" 6 "Baby Mature Speed" "$baby"
+        printf "  ${CYN}%2d${R}) %-30s : ${BLD}${WHT}%s${R}\n" 7 "Egg Hatch Speed" "$hatch"
+        printf "  ${CYN}%2d${R}) %-30s : ${BLD}${WHT}%s${R}\n" 8 "Item Stack Size" "$stack"
         echo ""
         echo "  ${BLD}${WHT}  Limits${R}"
-        printf "  ${CYN} 9${R}) Max Tamed Dinos             : ${BLD}${WHT}%s${R}\n" "$max_tamed"
-        printf "  ${CYN}10${R}) Auto-Save Interval (min)    : ${BLD}${WHT}%s${R}\n" "$auto_save"
-        printf "  ${CYN}11${R}) Max Structures In Range     : ${BLD}${WHT}%s${R}\n" "$max_struct"
+        printf "  ${CYN}%2d${R}) %-30s : ${BLD}${WHT}%s${R}\n" 9 "Max Tamed Dinos" "$max_tamed"
+        printf "  ${CYN}%2d${R}) %-30s : ${BLD}${WHT}%s${R}\n" 10 "Auto-Save Interval (min)" "$auto_save"
+        printf "  ${CYN}%2d${R}) %-30s : ${BLD}${WHT}%s${R}\n" 11 "Max Structures In Range" "$max_struct"
         echo ""
         echo "  ${BLD}${WHT}  Advanced${R}"
-        echo "  ${CYN}12${R}) Graphics Preset              ${DIM}(low/medium/high/auto)${R}"
-        echo "  ${CYN}13${R}) Edit GameUserSettings.ini    ${DIM}(nano)${R}"
-        echo "  ${CYN}14${R}) Edit Game.ini                ${DIM}(nano)${R}"
-        echo "  ${CYN}15${R}) Edit map.conf                ${DIM}(ports/passwords)${R}"
+        printf "  ${CYN}%2d${R}) %-30s   ${DIM}(low/medium/high/auto)${R}\n" 12 "Graphics Preset"
+        printf "  ${CYN}%2d${R}) %-30s   ${DIM}(nano)${R}\n" 13 "Edit GameUserSettings.ini"
+        printf "  ${CYN}%2d${R}) %-30s   ${DIM}(nano)${R}\n" 14 "Edit Game.ini"
+        printf "  ${CYN}%2d${R}) %-30s   ${DIM}(ports/passwords)${R}\n" 15 "Edit map.conf"
         echo ""
         echo "  ${DIM} 0) Back${R}"
         echo ""
@@ -1513,6 +1559,7 @@ delete_map() {
         sudo systemctl daemon-reload
         sed -i "/^${map}|/d" "$MAPS_CONF"
         rm -rf "$MAPS_DIR/$map"
+        rm -f "/tmp/.ark-players-${map}" "/tmp/.ark-join-${map}"
         FEEDBACK="${GRN}${BLD}✔${R} Map '${BLD}$map${R}' deleted."
         return 0
     fi
@@ -1548,7 +1595,7 @@ change_map_type() {
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
-#  TOGGLE BATCH / AUTO-START
+#  TOGGLE GROEP / AUTO-START (return feedback via stdout)
 #═══════════════════════════════════════════════════════════════════════════════
 
 toggle_batch() {
@@ -1556,12 +1603,11 @@ toggle_batch() {
     local current; current=$(read_conf_value "$MAPS_DIR/$map/map.conf" "BatchEnabled" "true")
     if [[ "$current" == "true" ]]; then
         write_conf_value "$MAPS_DIR/$map/map.conf" "BatchEnabled" "false"
-        log_ok "${BLD}$map${R}${GRN} will be ${RED}skipped${R}${GRN} in Start All / Stop All."
+        echo "${GRN}${BLD}✔${R} ${BLD}$map${R}: Groep ${RED}UIT${R} — wordt overgeslagen bij Start All / Stop All"
     else
         write_conf_value "$MAPS_DIR/$map/map.conf" "BatchEnabled" "true"
-        log_ok "${BLD}$map${R}${GRN} will be ${GRN}included${R}${GRN} in Start All / Stop All."
+        echo "${GRN}${BLD}✔${R} ${BLD}$map${R}: Groep ${GRN}AAN${R} — doet mee met Start All / Stop All"
     fi
-    sleep 1
 }
 
 toggle_autostart() {
@@ -1569,12 +1615,11 @@ toggle_autostart() {
     local service="ark-${map,,}.service"
     if systemctl is-enabled "$service" 2>/dev/null | grep -q "enabled"; then
         sudo systemctl disable "$service" 2>/dev/null
-        log_ok "${BLD}$map${R}${GRN}: Auto-start ${RED}disabled${R}${GRN}. Won't start on boot/power recovery."
+        echo "${GRN}${BLD}✔${R} ${BLD}$map${R}: Auto-start ${RED}UIT${R} — start niet na reboot/stroomstoring"
     else
         sudo systemctl enable "$service" 2>/dev/null
-        log_ok "${BLD}$map${R}${GRN}: Auto-start ${GRN}enabled${R}${GRN}. Will start on boot/power recovery."
+        echo "${GRN}${BLD}✔${R} ${BLD}$map${R}: Auto-start ${GRN}AAN${R} — start automatisch na reboot/stroomstoring"
     fi
-    sleep 1
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
@@ -1719,7 +1764,7 @@ select_map() {
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
-#  MAP MENU (per-map management, clears screen each iteration)
+#  MAP MENU (per-map management — live status refreshes every 2s)
 #═══════════════════════════════════════════════════════════════════════════════
 
 map_menu() {
@@ -1727,61 +1772,75 @@ map_menu() {
     local map_feedback=""
 
     while true; do
+        # Guard: if map was deleted, exit this menu
+        [[ ! -d "$MAPS_DIR/$map" ]] && return
+
         clear
-        local internal health_raw
+        local internal
         internal=$(read_conf_value "$MAPS_DIR/$map/map.conf" "MapName" "?")
-        health_raw=$(check_map_health "$map")
 
         echo ""
         echo "  ${BLD}${BLU}╔═══════════════════════════════════════════════════════════╗${R}"
         echo "  ${BLD}${BLU}║${R}  ${BLD}${WHT}$map${R}  ${DIM}($internal)${R}"
         echo "  ${BLD}${BLU}╚═══════════════════════════════════════════════════════════╝${R}"
 
-        # Status line
-        local status_text health_text
+        # Live status block
         if is_map_running "$map"; then
-            status_text="${BG_GRN}${BLD}${WHT} ONLINE ${R}"
+            local health_raw
+            health_raw=$(check_map_health "$map")
+            local status_text="${BG_GRN}${BLD}${WHT} ONLINE ${R}"
+            local health_text
             case "$health_raw" in
                 HEALTHY)  health_text="${GRN}${BLD}HEALTHY${R}" ;;
                 DEGRADED) health_text="${YEL}${BLD}DEGRADED${R}" ;;
                 *)        health_text="${RED}${BLD}$health_raw${R}" ;;
             esac
-            local pc up mem cpu join_raw batch_st auto_st
+            local pc up mem cpu join_raw
             pc=$(get_player_count "$map" 2>/dev/null || echo "?")
-            up=$(get_map_uptime "$map"); mem=$(get_map_memory "$map"); cpu=$(get_map_cpu "$map")
+            local max_p; max_p=$(read_conf_value "$MAPS_DIR/$map/map.conf" "MaxPlayers" "70")
+            up=$(get_map_uptime "$map")
+            mem=$(get_map_memory "$map")
+            cpu=$(get_map_cpu "$map")
             join_raw=$(check_server_queryable "$map")
-            echo "  ${status_text}  ${health_text}  │  Players: ${BLD}${pc}${R}  │  Uptime: ${BLD}${up}${R}"
-            echo "  RAM: ${BLD}${mem}${R}  │  CPU: ${BLD}${cpu}${R}  │  Joinable: $(
-                [[ "$join_raw" == "YES" ]] && echo "${GRN}${BLD}✔ YES${R}" || echo "${RED}✖ NO${R}"
-            )"
+            local join_text
+            [[ "$join_raw" == "YES" ]] && join_text="${GRN}${BLD}✔ YES${R}" || join_text="${RED}${BLD}✖ NO${R}"
+
+            echo "  ${status_text}  ${health_text}  │  Players: ${BLD}${pc}/${max_p}${R}  │  Uptime: ${BLD}${up}${R}"
+            echo "  RAM: ${BLD}${mem}${R}  │  CPU: ${BLD}${cpu}${R}  │  Join: ${join_text}"
         else
             echo "  ${BG_RED}${BLD}${WHT} OFFLINE ${R}  ${DIM}STOPPED${R}"
         fi
 
-        # Batch / Auto-start status
-        local batch_s auto_s
-        is_batch_enabled "$map" && batch_s="${GRN}ON${R}" || batch_s="${RED}OFF${R}"
-        is_autostart_enabled "$map" 2>/dev/null && auto_s="${GRN}ON${R}" || auto_s="${RED}OFF${R}"
-        echo "  Batch: ${batch_s}  │  Auto-start: ${auto_s}"
+        # Groep / Auto-start status
+        local groep_s auto_s
+        is_batch_enabled "$map" && groep_s="${GRN}AAN${R}" || groep_s="${RED}UIT${R}"
+        is_autostart_enabled "$map" 2>/dev/null && auto_s="${GRN}AAN${R}" || auto_s="${RED}UIT${R}"
+        echo "  Groep: ${groep_s}  │  Auto-start: ${auto_s}"
 
-        # Show feedback
+        # Show feedback if any
         if [[ -n "$map_feedback" ]]; then
-            echo ""; echo "  $map_feedback"; map_feedback=""
+            echo ""
+            echo "  $map_feedback"
+            map_feedback=""
         fi
         echo ""
 
-        echo "  ${CYN} 1${R}) ${GRN}Start${R}              ${CYN} 8${R}) Restore Backup"
-        echo "  ${CYN} 2${R}) ${RED}Stop${R}               ${CYN} 9${R}) View Logs"
-        echo "  ${CYN} 3${R}) ${YEL}Restart${R}            ${CYN}10${R}) Browse Files"
-        echo "  ${CYN} 4${R}) RCON Console        ${CYN}11${R}) Change Map Type"
-        echo "  ${CYN} 5${R}) Server Settings     ${CYN}12${R}) Toggle Batch"
-        echo "  ${CYN} 6${R}) Mod Management      ${CYN}13${R}) Toggle Auto-Start"
-        echo "  ${CYN} 7${R}) Backup World        ${CYN}14${R}) ${RED}Delete Map${R}"
+        # Menu options — aligned columns with printf %2d for consistent numbering
+        printf "  ${CYN}%2d${R}) ${GRN}%-20s${R}${CYN}%2d${R}) %s\n" 1 "Start" 8 "Restore Backup"
+        printf "  ${CYN}%2d${R}) ${RED}%-20s${R}${CYN}%2d${R}) %s\n" 2 "Stop" 9 "View Logs"
+        printf "  ${CYN}%2d${R}) ${YEL}%-20s${R}${CYN}%2d${R}) %s\n" 3 "Restart" 10 "Browse Files"
+        printf "  ${CYN}%2d${R}) %-20s  ${CYN}%2d${R}) %s\n" 4 "RCON Console" 11 "Change Map Type"
+        printf "  ${CYN}%2d${R}) %-20s  ${CYN}%2d${R}) %s\n" 5 "Server Settings" 12 "Toggle Groep"
+        printf "  ${CYN}%2d${R}) %-20s  ${CYN}%2d${R}) %s\n" 6 "Mod Management" 13 "Toggle Auto-Start"
+        printf "  ${CYN}%2d${R}) %-20s  ${CYN}%2d${R}) ${RED}%s${R}\n" 7 "Backup World" 14 "Delete Map"
         echo ""
         echo "  ${DIM} 0) Back to Dashboard${R}"
         echo ""
-        echo -n "  ${WHT}Choice: ${R}"
-        read -r choice
+        echo -n "  ${GRY}↻ Live 2s │${R} ${WHT}Choice: ${R}"
+
+        # Auto-refresh every 2 seconds
+        read -t 2 -r choice 2>/dev/null || true
+        [[ -z "$choice" ]] && continue
 
         case "$choice" in
             1)  clear; start_map "$map"; press_enter ;;
@@ -1795,8 +1854,8 @@ map_menu() {
             9)  view_logs "$map" ;;
             10) browse_files "$map" ;;
             11) change_map_type "$map" ;;
-            12) clear; toggle_batch "$map" ;;
-            13) clear; toggle_autostart "$map" ;;
+            12) map_feedback=$(toggle_batch "$map") ;;
+            13) map_feedback=$(toggle_autostart "$map") ;;
             14) clear; delete_map "$map" && return ;;
             0|"") return ;;
             *) ;;
@@ -1805,7 +1864,7 @@ map_menu() {
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
-#  MAIN MENU (live dashboard + always-visible options, auto-refresh)
+#  MAIN MENU (live dashboard — refreshes every 2s, options always visible)
 #═══════════════════════════════════════════════════════════════════════════════
 
 main_menu() {
@@ -1816,18 +1875,17 @@ main_menu() {
         echo ""
         echo "  ${BLD}${WHT}Actions:${R}"
         echo ""
-        echo "  ${CYN} 1${R}) ${BLU}Select Map${R}            ${CYN} 6${R}) Send RCON Command"
-        echo "  ${CYN} 2${R}) ${GRN}Add Map${R}               ${CYN} 7${R}) Broadcast Message"
-        echo "  ${CYN} 3${R}) ${GRN}Start All${R} ${DIM}(batch)${R}     ${CYN} 8${R}) Scheduled Restarts"
-        echo "  ${CYN} 4${R}) ${RED}Stop All${R} ${DIM}(batch)${R}      ${CYN} 9${R}) Global Defaults"
-        echo "  ${CYN} 5${R}) Install / Update"
+        printf "  ${CYN}%2d${R}) ${BLU}%-22s${R}${CYN}%2d${R}) %s\n" 1 "Select Map" 5 "Send RCON Command"
+        printf "  ${CYN}%2d${R}) ${GRN}%-22s${R}${CYN}%2d${R}) %s\n" 2 "Add Map" 6 "Broadcast Message"
+        printf "  ${CYN}%2d${R}) ${GRN}%-14s${R}${DIM}(groep)${R}  ${CYN}%2d${R}) %s\n" 3 "Start All" 7 "Scheduled Restarts"
+        printf "  ${CYN}%2d${R}) ${RED}%-14s${R}${DIM}(groep)${R}  ${CYN}%2d${R}) %s\n" 4 "Stop All" 8 "Install / Update"
         echo ""
         echo "  ${DIM} 0) Exit${R}"
         echo ""
-        echo -n "  ${GRY}↻ Auto-refresh 10s │${R} ${WHT}Choice: ${R}"
+        echo -n "  ${GRY}↻ Live 2s │${R} ${WHT}Choice: ${R}"
 
-        # Read with timeout — auto-refresh when no input
-        read -t 10 -r choice 2>/dev/null || true
+        # Auto-refresh every 2 seconds
+        read -t 2 -r choice 2>/dev/null || true
         [[ -z "$choice" ]] && continue
 
         case "$choice" in
@@ -1835,15 +1893,14 @@ main_menu() {
             2)  add_map ;;
             3)  clear; start_all_maps; press_enter ;;
             4)  clear; stop_all_maps; press_enter ;;
-            5)  install_server ;;
-            6)
+            5)
                 if select_map; then
                     echo -n "  ${WHT}RCON command: ${R}"
                     read -r cmd
                     [[ -n "$cmd" ]] && { clear; send_rcon "$SELECTED_MAP" "$cmd"; press_enter; }
                 fi
                 ;;
-            7)
+            6)
                 clear
                 echo ""
                 echo -n "  ${WHT}Message: ${R}"
@@ -1851,8 +1908,8 @@ main_menu() {
                 [[ -n "$msg" ]] && broadcast_message "$msg"
                 sleep 1
                 ;;
-            8)  setup_scheduled_restart ;;
-            9)  ${EDITOR:-nano} "$DEFAULTS_CONF" ;;
+            7)  setup_scheduled_restart ;;
+            8)  install_server ;;
             0)
                 echo ""
                 echo "  ${GRN}${BLD}Goodbye! 🦖${R}"
@@ -1871,10 +1928,10 @@ main_menu() {
 cli_status() {
     local maps; maps=( $(get_maps) )
     (( ${#maps[@]} == 0 )) && { echo "No maps configured."; return; }
-    printf "${BLD}%-16s %-10s %-10s %-9s %-8s %-8s %-6s %-6s${R}\n" "MAP" "STATUS" "HEALTH" "PLAYERS" "UPTIME" "RAM" "CPU" "JOIN"
-    echo "───────────────────────────────────────────────────────────────────────────"
+    printf "${BLD}%-15s %-10s %-9s %-8s %-7s %-6s %-5s %-4s %-4s${R}\n" "MAP" "STATUS" "HEALTH" "PLAYERS" "UPTIME" "RAM" "CPU" "JOIN" "AUTO"
+    echo "──────────────────────────────────────────────────────────────────────────"
     for map in "${maps[@]}"; do
-        local status health players uptime mem cpu join
+        local status health players uptime mem cpu join auto_s
         is_map_running "$map" && status="${GRN}ONLINE${R}" || status="${RED}OFFLINE${R}"
         health=$(check_map_health "$map")
         case "$health" in
@@ -1888,13 +1945,15 @@ cli_status() {
             pc=$(get_player_count "$map" 2>/dev/null || echo "?")
             max_p=$(read_conf_value "$MAPS_DIR/$map/map.conf" "MaxPlayers" "70")
             players="${pc}/${max_p}"
-            join=$(check_server_queryable "$map")
-            [[ "$join" == "YES" ]] && join="${GRN}✔ YES${R}" || join="${RED}✖ NO${R}"
+            local join_raw
+            join_raw=$(check_server_queryable "$map")
+            [[ "$join_raw" == "YES" ]] && join="${GRN}✔${R}" || join="${RED}✖${R}"
         else
             players="-"; join="${DIM}-${R}"
         fi
         uptime=$(get_map_uptime "$map"); mem=$(get_map_memory "$map"); cpu=$(get_map_cpu "$map")
-        echo "$(pad 16 "$map") ${status}     ${health}   $(pad 9 "$players") $(pad 8 "$uptime") $(pad 8 "$mem") $(pad 6 "$cpu") ${join}"
+        is_autostart_enabled "$map" 2>/dev/null && auto_s="${GRN}YES${R}" || auto_s="${RED}NO${R}"
+        echo "$(pad 15 "$map") ${status}    ${health}  $(pad 8 "$players") $(pad 7 "$uptime") $(pad 6 "$mem") $(pad 5 "$cpu") ${join}    ${auto_s}"
     done
 }
 
@@ -1909,8 +1968,8 @@ show_help() {
     echo "  ${CYN}start${R} <map>         Start a map"
     echo "  ${CYN}stop${R} <map>          Stop a map"
     echo "  ${CYN}restart${R} <map>       Restart a map"
-    echo "  ${CYN}start-all${R}           Start all batch-enabled maps"
-    echo "  ${CYN}stop-all${R}            Stop all batch-enabled maps"
+    echo "  ${CYN}start-all${R}           Start all groep maps"
+    echo "  ${CYN}stop-all${R}            Stop all groep maps"
     echo "  ${CYN}status${R}              Show all map statuses"
     echo "  ${CYN}rcon${R} <map> \"cmd\"    Send RCON command"
     echo "  ${CYN}backup${R} <map>        Backup map world"
