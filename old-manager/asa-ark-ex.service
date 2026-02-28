@@ -1,0 +1,20 @@
+[Unit]
+Description=ARK ASA instance ARK-ex
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+User=arkadmin
+WorkingDirectory=/home/arkadmin/ark-server/Linux-ASA-Server-Manager
+Environment=PROTON_LOG=1
+Environment=PROTON_LOG_DIR=/home/arkadmin
+ExecStart=/home/arkadmin/ark-server/Linux-ASA-Server-Manager/ark_instance_manager.sh ARK-ex start
+ExecStop=/home/arkadmin/ark-server/Linux-ASA-Server-Manager/ark_instance_manager.sh ARK-ex stop
+Restart=on-failure
+RestartSec=20
+TimeoutStartSec=180
+TimeoutStopSec=180
+
+[Install]
+WantedBy=multi-user.target
