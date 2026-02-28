@@ -1,0 +1,14 @@
+# Server runtime files (not needed in repo)
+server-files/
+steamcmd/
+GE-Proton*/
+*.tar.gz
+*.log
+maps/*/backups/*.tar.gz
+maps/*/server.log
+healthcheck.log
+restart.log
+
+# OS
+.DS_Store
+Thumbs.db
