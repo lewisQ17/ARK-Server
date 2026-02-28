@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #═══════════════════════════════════════════════════════════════════════════════
-#  ARK: Survival Ascended — Linux Server Manager  v2.0
+#  ARK: Survival Ascended — Linux Server Manager  v2.1
 #  A clean, map-centered management tool for ASA dedicated servers.
 #  https://github.com/lewisQ17/ARK-Server
 #═══════════════════════════════════════════════════════════════════════════════
-set -uo pipefail
+set -u
 
-VERSION="2.0"
+VERSION="2.1"
 export LC_ALL=C.UTF-8 LANG=C.UTF-8
 
 #───────────────────────────── Paths ──────────────────────────────────────────
@@ -31,8 +31,6 @@ ARK_APPID=2430930
 R=$'\e[0m'
 BLD=$'\e[1m'
 DIM=$'\e[2m'
-ITAL=$'\e[3m'
-ULINE=$'\e[4m'
 RED=$'\e[31m'
 GRN=$'\e[32m'
 YEL=$'\e[33m'
@@ -45,8 +43,6 @@ BG_GRN=$'\e[42m'
 BG_RED=$'\e[41m'
 BG_YEL=$'\e[43m'
 BG_BLU=$'\e[44m'
-BG_MAG=$'\e[45m'
-BG_CYN=$'\e[46m'
 
 #───────────────────────────── Known Maps ─────────────────────────────────────
 declare -A MAP_NAMES=(
@@ -64,6 +60,9 @@ declare -A MAP_NAMES=(
     ["GenesisPart2"]="Gen2_WP"
 )
 
+# Global feedback variable — shown once on next dashboard refresh
+FEEDBACK=""
+
 #═══════════════════════════════════════════════════════════════════════════════
 #  UTILITY FUNCTIONS
 #═══════════════════════════════════════════════════════════════════════════════
@@ -73,13 +72,11 @@ log_ok()    { echo "${GRN}${BLD}  ✔ ${R} $*"; }
 log_warn()  { echo "${YEL}${BLD}  ⚠ ${R} $*"; }
 log_err()   { echo "${RED}${BLD}  ✖ ${R} $*"; }
 
-separator() {
-    echo "  ${GRY}──────────────────────────────────────────────────────────────────────${R}"
-}
+separator() { echo "  ${GRY}──────────────────────────────────────────────────────────────────────────────${R}"; }
+thin_sep()  { echo "  ${GRY}╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌${R}"; }
 
-thin_sep() {
-    echo "  ${GRY}╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌${R}"
-}
+# Pad text to exact visible width (for column alignment)
+pad() { printf "%-${1}s" "${2:0:$1}"; }
 
 confirm() {
     local msg="${1:-Continue?}"
@@ -94,7 +91,6 @@ press_enter() {
     read -r
 }
 
-# Read a config value from an INI-style file
 read_conf_value() {
     local file="$1" key="$2" default="${3:-}"
     local val
@@ -102,7 +98,6 @@ read_conf_value() {
     echo "${val:-$default}"
 }
 
-# Write/update a config value
 write_conf_value() {
     local file="$1" key="$2" value="$3"
     if grep -qE "^${key}=" "$file" 2>/dev/null; then
@@ -112,36 +107,18 @@ write_conf_value() {
     fi
 }
 
-# Prompt for input with default. Empty input = use default. "0" = cancel/back.
-# Returns 1 if user wants to go back.
-read_input() {
-    local prompt="$1" default="$2" varname="$3"
-    echo -n "  ${WHT}${prompt}${R} ${DIM}[${default}]${R}: "
-    local input
-    read -r input
-    if [[ "$input" == "0" ]]; then
-        return 1
-    fi
-    printf -v "$varname" '%s' "${input:-$default}"
-    return 0
-}
-
 #═══════════════════════════════════════════════════════════════════════════════
-#  DEPENDENCY CHECK & INSTALL
+#  DEPENDENCY CHECK
 #═══════════════════════════════════════════════════════════════════════════════
 
 check_dependencies() {
     local missing=()
     local deps=(wget tar grep python3 curl cron)
-
     if command -v apt-get &>/dev/null; then
         for pkg in libc6:i386 libstdc++6:i386 libncursesw6:i386 libfreetype6:i386 libfreetype6:amd64; do
-            if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
-                missing+=("$pkg")
-            fi
+            dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed" || missing+=("$pkg")
         done
     fi
-
     for cmd in "${deps[@]}"; do
         if [[ "$cmd" == "cron" ]]; then
             command -v crontab &>/dev/null || missing+=("cron")
@@ -149,7 +126,6 @@ check_dependencies() {
             command -v "$cmd" &>/dev/null || missing+=("$cmd")
         fi
     done
-
     if (( ${#missing[@]} > 0 )); then
         log_warn "Missing packages: ${missing[*]}"
         if confirm "Install them now? (requires sudo)"; then
@@ -157,22 +133,15 @@ check_dependencies() {
                 sudo dpkg --add-architecture i386 2>/dev/null || true
                 sudo apt-get update -qq
                 sudo apt-get install -y "${missing[@]}"
-            elif command -v dnf &>/dev/null; then
-                sudo dnf install -y "${missing[@]}"
-            elif command -v pacman &>/dev/null; then
-                sudo pacman -S --noconfirm "${missing[@]}"
             fi
             log_ok "Dependencies installed."
-        else
-            log_warn "Continuing without all dependencies — some features may fail."
         fi
     fi
 }
 
 check_cpu_flags() {
     if ! grep -qw avx /proc/cpuinfo || ! grep -qw avx2 /proc/cpuinfo; then
-        log_err "CPU missing AVX/AVX2 support. ARK: Survival Ascended requires these."
-        log_err "If running in a VM, set CPU type to 'host' in your hypervisor."
+        log_err "CPU missing AVX/AVX2 support. Set CPU type to 'host' in your hypervisor."
         return 1
     fi
     return 0
@@ -183,17 +152,16 @@ check_cpu_flags() {
 #═══════════════════════════════════════════════════════════════════════════════
 
 install_server() {
+    clear
     log_info "Installing / Updating ARK server..."
     check_cpu_flags || return 1
 
-    # Check no maps are running
     local running=0
     for map_dir in "$MAPS_DIR"/*/; do
         [[ -d "$map_dir" ]] || continue
-        local mname
-        mname=$(basename "$map_dir")
+        local mname; mname=$(basename "$map_dir")
         if is_map_running "$mname"; then
-            log_err "Map '${BLD}$mname${R}' is running. Stop all maps before updating."
+            log_err "Map '${BLD}$mname${R}' is running. Stop all maps first."
             ((running++))
         fi
     done
@@ -201,7 +169,6 @@ install_server() {
 
     mkdir -p "$STEAMCMD_DIR" "$PROTON_DIR" "$SERVER_DIR"
 
-    # ─── SteamCMD ───
     if [[ ! -f "$STEAMCMD_DIR/steamcmd.sh" ]]; then
         log_info "Downloading SteamCMD..."
         wget -q -O "$STEAMCMD_DIR/steamcmd_linux.tar.gz" "$STEAMCMD_URL"
@@ -212,12 +179,10 @@ install_server() {
         log_ok "SteamCMD already present."
     fi
 
-    # ─── Steam SDK symlinks ───
     mkdir -p "$HOME/.steam/sdk32" "$HOME/.steam/sdk64"
     ln -sf "$STEAMCMD_DIR/linux32/steamclient.so" "$HOME/.steam/sdk32/steamclient.so"
     ln -sf "$STEAMCMD_DIR/linux64/steamclient.so" "$HOME/.steam/sdk64/steamclient.so"
 
-    # ─── GE-Proton ───
     if [[ ! -d "$PROTON_DIR/files" ]]; then
         log_info "Downloading ${BLD}$PROTON_VERSION${R}..."
         wget -q --show-progress -O "$PROTON_DIR/$PROTON_VERSION.tar.gz" "$PROTON_URL"
@@ -228,7 +193,6 @@ install_server() {
         log_ok "Proton already present."
     fi
 
-    # ─── ARK Dedicated Server ───
     log_info "Downloading / Updating ARK (AppID ${BLD}$ARK_APPID${R})..."
     "$STEAMCMD_DIR/steamcmd.sh" \
         +force_install_dir "$SERVER_DIR" \
@@ -237,21 +201,18 @@ install_server() {
         +app_update $ARK_APPID validate \
         +quit
 
-    # Delete .pdb files to save space
     local pdb_count
     pdb_count=$(find "$SERVER_DIR" -name "*.pdb" 2>/dev/null | wc -l)
-    if (( pdb_count > 0 )); then
+    (( pdb_count > 0 )) && {
         log_info "Removing ${BLD}$pdb_count${R} .pdb debug files..."
         find "$SERVER_DIR" -name "*.pdb" -delete
-    fi
+    }
 
-    # Initialize Proton Prefix
     local compat_dir="$SERVER_DIR/steamapps/compatdata/$ARK_APPID"
     if [[ ! -d "$compat_dir/pfx" ]]; then
         log_info "Initializing Proton prefix..."
         mkdir -p "$compat_dir"
         cp -r "$PROTON_DIR/files/share/default_pfx/." "$compat_dir/"
-        log_ok "Proton prefix initialized."
     fi
 
     apply_optimizations
@@ -259,12 +220,12 @@ install_server() {
 
     log_ok "Server installation/update complete!"
     echo ""
-    echo "  ${GRN}Next step:${R} Select ${BLD}'Add Map'${R} from the menu to create your first map."
-    echo ""
+    echo "  ${GRN}Next step:${R} Use ${BLD}'Add Map'${R} to create your first map."
+    press_enter
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
-#  MAP MANAGEMENT — status helpers
+#  MAP STATUS HELPERS
 #═══════════════════════════════════════════════════════════════════════════════
 
 get_maps() {
@@ -305,91 +266,143 @@ get_player_count() {
 check_map_health() {
     local map="$1"
     is_map_running "$map" || { echo "STOPPED"; return; }
-    local pid
-    pid=$(get_map_pid "$map")
+    local pid; pid=$(get_map_pid "$map")
     [[ -z "$pid" ]] && { echo "CRASHED"; return; }
-    local state
-    state=$(ps -o state= -p "$pid" 2>/dev/null || echo "?")
+    local state; state=$(ps -o state= -p "$pid" 2>/dev/null || echo "?")
     case "$state" in
         Z*) echo "ZOMBIE" ;;
         T*) echo "FROZEN" ;;
         *)
             local game_port
             game_port=$(read_conf_value "$MAPS_DIR/$map/map.conf" "GamePort" "7777")
-            if ss -lunp 2>/dev/null | grep -q ":${game_port} "; then
-                echo "HEALTHY"
-            else
-                echo "DEGRADED"
-            fi
+            if ss -lunp 2>/dev/null | grep -q ":${game_port} "; then echo "HEALTHY"; else echo "DEGRADED"; fi
             ;;
     esac
 }
 
 get_map_uptime() {
     local map="$1"
-    local pid
-    pid=$(get_map_pid "$map")
+    local pid; pid=$(get_map_pid "$map")
     [[ -z "$pid" ]] && { echo "-"; return; }
-    local elapsed
-    elapsed=$(ps -o etimes= -p "$pid" 2>/dev/null | tr -d ' ')
+    local elapsed; elapsed=$(ps -o etimes= -p "$pid" 2>/dev/null | tr -d ' ')
     [[ -z "$elapsed" ]] && { echo "-"; return; }
-    local days=$(( elapsed / 86400 ))
-    local hours=$(( (elapsed % 86400) / 3600 ))
-    local mins=$(( (elapsed % 3600) / 60 ))
-    if (( days > 0 )); then
-        echo "${days}d ${hours}h"
-    elif (( hours > 0 )); then
-        echo "${hours}h ${mins}m"
-    else
-        echo "${mins}m"
+    local d=$(( elapsed / 86400 )) h=$(( (elapsed % 86400) / 3600 )) m=$(( (elapsed % 3600) / 60 ))
+    if (( d > 0 )); then echo "${d}d ${h}h"
+    elif (( h > 0 )); then echo "${h}h ${m}m"
+    else echo "${m}m"
     fi
 }
 
+# RAM per map — uses systemd cgroup (accurate) or fallback to process tree
 get_map_memory() {
     local map="$1"
-    local pid
-    pid=$(get_map_pid "$map")
-    [[ -z "$pid" ]] && { echo "-"; return; }
-    local rss
-    rss=$(ps -o rss= -p "$pid" 2>/dev/null | tr -d ' ')
-    [[ -z "$rss" ]] || (( rss == 0 )) && { echo "-"; return; }
-    local mb=$(( rss / 1024 ))
+    is_map_running "$map" || { echo "-"; return; }
+
+    # Method 1: systemd cgroup (all processes in service)
+    local service="ark-${map,,}.service"
+    local bytes
+    bytes=$(systemctl show "$service" --property=MemoryCurrent 2>/dev/null | cut -d= -f2)
+    if [[ "$bytes" =~ ^[0-9]+$ ]] && (( bytes > 1048576 )); then
+        local mb=$(( bytes / 1048576 ))
+        if (( mb > 1024 )); then
+            printf "%.1fG" "$(awk "BEGIN{printf \"%.1f\", $mb/1024}")"
+        else
+            echo "${mb}M"
+        fi
+        return
+    fi
+
+    # Method 2: Sum RSS of all matching processes
+    local save_dir; save_dir=$(read_conf_value "$MAPS_DIR/$map/map.conf" "SaveDir" "$map")
+    local total_kb=0
+    while IFS= read -r pid; do
+        local rss; rss=$(ps -o rss= -p "$pid" 2>/dev/null | tr -d ' ')
+        (( total_kb += ${rss:-0} ))
+    done < <(pgrep -f "AltSaveDirectoryName=${save_dir}" 2>/dev/null)
+    (( total_kb == 0 )) && { echo "-"; return; }
+    local mb=$(( total_kb / 1024 ))
     if (( mb > 1024 )); then
-        printf "%.1fG" "$(echo "scale=1; $mb/1024" | bc)"
+        printf "%.1fG" "$(awk "BEGIN{printf \"%.1f\", $mb/1024}")"
     else
         echo "${mb}M"
     fi
 }
 
-get_last_backup() {
+# CPU per map — sum %cpu of all related processes
+get_map_cpu() {
     local map="$1"
-    local backup_dir="$MAPS_DIR/$map/backups"
-    local latest
-    latest=$(ls -1t "$backup_dir"/*.tar.gz 2>/dev/null | head -1)
-    if [[ -n "$latest" ]]; then
-        stat -c '%Y' "$latest" 2>/dev/null | xargs -I{} date -d @{} '+%d/%m %H:%M' 2>/dev/null || echo "-"
+    is_map_running "$map" || { echo "-"; return; }
+
+    # Method 1: systemd cgroup PIDs
+    local service="ark-${map,,}.service"
+    local cgroup
+    cgroup=$(systemctl show "$service" --property=ControlGroup 2>/dev/null | cut -d= -f2)
+    if [[ -n "$cgroup" && -f "/sys/fs/cgroup${cgroup}/cgroup.procs" ]]; then
+        local total
+        total=$(cat "/sys/fs/cgroup${cgroup}/cgroup.procs" 2>/dev/null | \
+            xargs -I{} ps -o %cpu= -p {} 2>/dev/null | \
+            awk '{s+=$1}END{printf "%.0f", s}')
+        echo "${total:-0}%"
+        return
+    fi
+
+    # Method 2: pgrep
+    local save_dir; save_dir=$(read_conf_value "$MAPS_DIR/$map/map.conf" "SaveDir" "$map")
+    local total
+    total=$(pgrep -f "AltSaveDirectoryName=${save_dir}" 2>/dev/null | \
+        xargs -I{} ps -o %cpu= -p {} 2>/dev/null | \
+        awk '{s+=$1}END{printf "%.0f", s}' 2>/dev/null)
+    echo "${total:-0}%"
+}
+
+# Check if server is joinable — all 3 ports (game/query/rcon) must be listening
+check_server_queryable() {
+    local map="$1"
+    is_map_running "$map" || { echo "-"; return; }
+    local game_port query_port rcon_port
+    game_port=$(read_conf_value "$MAPS_DIR/$map/map.conf" "GamePort" "7777")
+    query_port=$(read_conf_value "$MAPS_DIR/$map/map.conf" "QueryPort" "27015")
+    rcon_port=$(read_conf_value "$MAPS_DIR/$map/map.conf" "RCONPort" "27020")
+    if ss -lunp 2>/dev/null | grep -q ":${game_port} " && \
+       ss -lunp 2>/dev/null | grep -q ":${query_port} " && \
+       ss -tlnp 2>/dev/null | grep -q ":${rcon_port} "; then
+        echo "YES"
     else
-        echo "${DIM}never${R}"
+        echo "NO"
     fi
 }
 
+# Check if map is included in batch start/stop
+is_batch_enabled() {
+    local map="$1"
+    local val
+    val=$(read_conf_value "$MAPS_DIR/$map/map.conf" "BatchEnabled" "true")
+    [[ "$val" == "true" ]]
+}
+
+# Check if systemd auto-start is enabled
+is_autostart_enabled() {
+    local map="$1"
+    local service="ark-${map,,}.service"
+    systemctl is-enabled "$service" 2>/dev/null | grep -q "enabled"
+}
+
 #═══════════════════════════════════════════════════════════════════════════════
-#  DASHBOARD
+#  DASHBOARD (always shown with menu, auto-refreshes)
 #═══════════════════════════════════════════════════════════════════════════════
 
 show_dashboard() {
     clear
-    local maps
-    maps=( $(get_maps) )
+    local maps; maps=( $(get_maps) )
 
-    # ─── Header ───
+    # Header
     echo ""
-    echo "  ${BLD}${BLU}╔═══════════════════════════════════════════════════════════════════╗${R}"
-    echo "  ${BLD}${BLU}║${R}  ${BLD}${WHT}  🦖  ARK: Survival Ascended — Server Manager${R}  ${DIM}v${VERSION}${R}      ${BLD}${BLU}║${R}"
-    echo "  ${BLD}${BLU}╚═══════════════════════════════════════════════════════════════════╝${R}"
+    echo "  ${BLD}${BLU}╔══════════════════════════════════════════════════════════════════════════════╗${R}"
+    echo "  ${BLD}${BLU}║${R}  ${BLD}${WHT}  🦖  ARK: Survival Ascended — Server Manager${R}  ${DIM}v${VERSION}${R}                    ${BLD}${BLU}║${R}"
+    echo "  ${BLD}${BLU}╚══════════════════════════════════════════════════════════════════════════════╝${R}"
     echo ""
 
-    # ─── System info ───
+    # System info
     local cpu_use mem_total mem_used disk_free host_uptime
     cpu_use=$(top -bn1 2>/dev/null | grep "Cpu(s)" | awk '{print $2}' | cut -d. -f1 || echo "?")
     mem_total=$(free -g 2>/dev/null | awk '/Mem:/{print $2}' || echo "?")
@@ -397,16 +410,20 @@ show_dashboard() {
     disk_free=$(df -h "$SCRIPT_DIR" 2>/dev/null | awk 'NR==2{print $4}' || echo "?")
     host_uptime=$(uptime -p 2>/dev/null | sed 's/up //' || echo "?")
 
-    echo "  ${GRY}┌─ System ──────────────────────────────────────────────────────────┐${R}"
-    echo "  ${GRY}│${R}  CPU ${BLD}${cpu_use}%${R}  ${GRY}│${R}  RAM ${BLD}${mem_used}G${R}/${mem_total}G  ${GRY}│${R}  Disk ${BLD}${disk_free}${R} free  ${GRY}│${R}  Up ${BLD}${host_uptime}${R}"
-    echo "  ${GRY}└───────────────────────────────────────────────────────────────────┘${R}"
+    echo "  ${GRY}┌─ System ─────────────────────────────────────────────────────────────────────┐${R}"
+    printf "  ${GRY}│${R}  CPU ${BLD}%s%%${R}  ${GRY}│${R}  RAM ${BLD}%sG${R}/%sG  ${GRY}│${R}  Disk ${BLD}%s${R} free  ${GRY}│${R}  Up ${BLD}%s${R}\n" \
+        "$cpu_use" "$mem_used" "$mem_total" "$disk_free" "$host_uptime"
+    echo "  ${GRY}└──────────────────────────────────────────────────────────────────────────────┘${R}"
     echo ""
 
     if (( ${#maps[@]} == 0 )); then
         echo "  ${DIM}No maps configured yet. Use ${WHT}Add Map${DIM} to get started.${R}"
     else
-        # Table header
-        echo "  ${BLD}${WHT}$(printf '%-15s' "MAP") $(printf '%-10s' "STATUS") $(printf '%-10s' "HEALTH") $(printf '%-9s' "PLAYERS") $(printf '%-8s' "UPTIME") $(printf '%-7s' "RAM") $(printf '%-12s' "PORTS")${R}"
+        # Table header — each column has a fixed visible width
+        printf "  ${BLD}${WHT}%s %s %s %s %s %s %s %s${R}\n" \
+            "$(pad 15 "MAP")" "$(pad 10 "STATUS")" "$(pad 10 "HEALTH")" \
+            "$(pad 9 "PLAYERS")" "$(pad 8 "UPTIME")" "$(pad 8 "RAM")" \
+            "$(pad 6 "CPU")" "$(pad 6 "JOIN")"
         separator
 
         for map in "${maps[@]}"; do
@@ -414,59 +431,76 @@ show_dashboard() {
             game_port=$(read_conf_value "$MAPS_DIR/$map/map.conf" "GamePort" "?")
             query_port=$(read_conf_value "$MAPS_DIR/$map/map.conf" "QueryPort" "?")
 
-            # Build row — each colored field has a FIXED visible width
-            local col_map col_status col_health col_players col_uptime col_mem col_ports
+            # MAP column
+            local p_map; p_map=$(pad 15 "$map")
 
-            col_map=$(printf '%-15s' "$map")
-
+            # STATUS column — colored badge
+            local status_raw status_col
             if is_map_running "$map"; then
-                col_status="${BG_GRN}${BLD}${WHT} ONLINE  ${R} "
+                status_raw=$(pad 10 "● ONLINE")
+                status_col="${GRN}${BLD}${status_raw}${R}"
             else
-                col_status="${BG_RED}${BLD}${WHT} OFFLINE ${R} "
+                status_raw=$(pad 10 "● OFFLINE")
+                status_col="${RED}${status_raw}${R}"
             fi
 
-            local health_raw
+            # HEALTH column
+            local health_raw health_col
             health_raw=$(check_map_health "$map")
             case "$health_raw" in
-                HEALTHY)  col_health="${GRN}${BLD}HEALTHY ${R} " ;;
-                DEGRADED) col_health="${YEL}${BLD}DEGRADED${R} " ;;
-                CRASHED)  col_health="${RED}${BLD}CRASHED ${R} " ;;
-                ZOMBIE)   col_health="${RED}${BLD}ZOMBIE  ${R} " ;;
-                FROZEN)   col_health="${RED}${BLD}FROZEN  ${R} " ;;
-                STOPPED)  col_health="${DIM}STOPPED ${R} " ;;
-                *)        col_health="${DIM}UNKNOWN ${R} " ;;
+                HEALTHY)  health_col="${GRN}$(pad 10 "$health_raw")${R}" ;;
+                DEGRADED) health_col="${YEL}$(pad 10 "$health_raw")${R}" ;;
+                CRASHED|ZOMBIE|FROZEN) health_col="${RED}$(pad 10 "$health_raw")${R}" ;;
+                *)        health_col="${DIM}$(pad 10 "$health_raw")${R}" ;;
             esac
 
+            # PLAYERS column
+            local p_players
             if is_map_running "$map"; then
                 local pc max_p
                 pc=$(get_player_count "$map" 2>/dev/null || echo "?")
                 max_p=$(read_conf_value "$MAPS_DIR/$map/map.conf" "MaxPlayers" "70")
-                col_players=$(printf '%-9s' "${pc}/${max_p}")
+                p_players=$(pad 9 "${pc}/${max_p}")
             else
-                col_players="${DIM}$(printf '%-9s' "-")${R}"
+                p_players="${DIM}$(pad 9 "-")${R}"
             fi
 
-            col_uptime=$(printf '%-8s' "$(get_map_uptime "$map")")
-            col_mem=$(printf '%-7s' "$(get_map_memory "$map")")
-            col_ports=$(printf '%-12s' "${game_port}/${query_port}")
+            # UPTIME, RAM, CPU columns
+            local p_uptime p_ram p_cpu
+            p_uptime=$(pad 8 "$(get_map_uptime "$map")")
+            p_ram=$(pad 8 "$(get_map_memory "$map")")
+            p_cpu=$(pad 6 "$(get_map_cpu "$map")")
 
-            echo "  ${col_map} ${col_status}${col_health}${col_players} ${col_uptime} ${col_mem} ${col_ports}"
+            # JOIN column — is server queryable?
+            local join_raw join_col
+            if is_map_running "$map"; then
+                join_raw=$(check_server_queryable "$map")
+                if [[ "$join_raw" == "YES" ]]; then
+                    join_col="${GRN}$(pad 6 "✔ YES")${R}"
+                else
+                    join_col="${RED}$(pad 6 "✖ NO")${R}"
+                fi
+            else
+                join_col="${DIM}$(pad 6 "-")${R}"
+            fi
+
+            # Batch/AutoStart indicators
+            local flags=""
+            is_batch_enabled "$map" || flags+="${DIM}[skip-batch]${R} "
+            is_autostart_enabled "$map" 2>/dev/null && flags+="${DIM}[auto-start]${R} "
+
+            # Print row — all raw padding before color = perfect alignment
+            echo "  ${p_map} ${status_col} ${health_col} ${p_players} ${p_uptime} ${p_ram} ${p_cpu} ${join_col} ${flags}"
         done
     fi
-
     echo ""
-}
 
-# Live dashboard — auto-refreshes every N seconds, press any key to go back
-live_dashboard() {
-    local refresh=5
-    while true; do
-        show_dashboard
-        echo "  ${DIM}${GRY}Auto-refreshing every ${refresh}s — press any key for menu...${R}"
-        if read -rsn1 -t "$refresh" 2>/dev/null; then
-            break
-        fi
-    done
+    # Show feedback if any
+    if [[ -n "$FEEDBACK" ]]; then
+        thin_sep
+        echo "  $FEEDBACK"
+        FEEDBACK=""
+    fi
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
@@ -474,6 +508,7 @@ live_dashboard() {
 #═══════════════════════════════════════════════════════════════════════════════
 
 add_map() {
+    clear
     echo ""
     echo "  ${BLD}${MAG}═══ Add New Map ═══${R}"
     echo ""
@@ -489,7 +524,6 @@ add_map() {
     echo ""
     echo "  ${DIM} 0) Back${R}"
     echo ""
-
     echo -n "  ${WHT}Select map number: ${R}"
     read -r choice
 
@@ -502,18 +536,17 @@ add_map() {
     elif (( choice == i )) 2>/dev/null; then
         echo -n "  ${WHT}Display name (e.g. MyMap): ${R}"
         read -r display_name
-        [[ -z "$display_name" ]] && { log_warn "Cancelled."; return 0; }
+        [[ -z "$display_name" ]] && return 0
         echo -n "  ${WHT}Internal map name (e.g. MyMap_WP): ${R}"
         read -r internal_name
-        [[ -z "$internal_name" ]] && { log_warn "Cancelled."; return 0; }
+        [[ -z "$internal_name" ]] && return 0
     else
-        log_err "Invalid selection."
+        FEEDBACK="${RED}${BLD}✖${R} Invalid selection."
         return 1
     fi
 
-    # Check if already exists
     if [[ -d "$MAPS_DIR/$display_name" ]]; then
-        log_err "Map '${BLD}$display_name${R}' already exists."
+        FEEDBACK="${RED}${BLD}✖${R} Map '${BLD}$display_name${R}' already exists."
         return 1
     fi
 
@@ -525,9 +558,8 @@ add_map() {
     def_maxp=$(read_conf_value "$DEFAULTS_CONF" "DefaultMaxPlayers" "70")
     def_adminpw=$(read_conf_value "$DEFAULTS_CONF" "DefaultAdminPassword" "")
 
-    # Auto-increment ports if other maps exist
-    local existing_maps
-    existing_maps=( $(get_maps) )
+    # Auto-increment ports
+    local existing_maps; existing_maps=( $(get_maps) )
     if (( ${#existing_maps[@]} > 0 )); then
         local max_gport=0 max_qport=0 max_rport=0
         for em in "${existing_maps[@]}"; do
@@ -545,25 +577,20 @@ add_map() {
     fi
 
     echo ""
-    echo "  ${BLD}Configure ${CYN}${display_name}${R}${BLD}:${R}  ${DIM}(press Enter for default, 0 = cancel)${R}"
+    echo "  ${BLD}Configure ${CYN}${display_name}${R}${BLD}:${R}  ${DIM}(Enter = default, 0 = cancel)${R}"
     thin_sep
 
-    local game_port query_port rcon_port max_players admin_pw server_pw mod_ids
-    read_input "Game Port" "$def_port" game_port || return 0
-    read_input "Query Port" "$def_qport" query_port || return 0
-    read_input "RCON Port" "$def_rport" rcon_port || return 0
-    read_input "Max Players" "$def_maxp" max_players || return 0
-    read_input "Admin Password" "$def_adminpw" admin_pw || return 0
-    read_input "Server Password (empty=public)" "" server_pw || return 0
-    read_input "Mod IDs (comma-separated)" "" mod_ids || return 0
+    local game_port query_port rcon_port max_players admin_pw server_pw
+    echo -n "  ${WHT}Game Port${R} ${DIM}[$def_port]${R}: "; read -r input; [[ "$input" == "0" ]] && return 0; game_port="${input:-$def_port}"
+    echo -n "  ${WHT}Query Port${R} ${DIM}[$def_qport]${R}: "; read -r input; [[ "$input" == "0" ]] && return 0; query_port="${input:-$def_qport}"
+    echo -n "  ${WHT}RCON Port${R} ${DIM}[$def_rport]${R}: "; read -r input; [[ "$input" == "0" ]] && return 0; rcon_port="${input:-$def_rport}"
+    echo -n "  ${WHT}Max Players${R} ${DIM}[$def_maxp]${R}: "; read -r input; [[ "$input" == "0" ]] && return 0; max_players="${input:-$def_maxp}"
+    echo -n "  ${WHT}Admin Password${R} ${DIM}[$def_adminpw]${R}: "; read -r input; [[ "$input" == "0" ]] && return 0; admin_pw="${input:-$def_adminpw}"
+    echo -n "  ${WHT}Server Password${R} ${DIM}[empty=public]${R}: "; read -r server_pw; [[ "$server_pw" == "0" ]] && return 0
 
-    echo ""
-
-    # Create map directory
     mkdir -p "$MAPS_DIR/$display_name/backups"
 
     cat > "$MAPS_DIR/$display_name/map.conf" <<EOF
-# Map Configuration: $display_name
 MapName=$internal_name
 DisplayName=$display_name
 SaveDir=$display_name
@@ -573,22 +600,22 @@ RCONPort=$rcon_port
 MaxPlayers=$max_players
 AdminPassword=$admin_pw
 ServerPassword=$server_pw
-ModIDs=$mod_ids
 CustomStartParams=$(read_conf_value "$DEFAULTS_CONF" "DefaultStartParams" "-NoBattlEye -crossplay -NoHangDetection")
 ClusterID=$(read_conf_value "$DEFAULTS_CONF" "ClusterID" "")
+BatchEnabled=true
 EOF
 
+    # Create empty mods.conf
+    echo "# Mod configuration for $display_name" > "$MAPS_DIR/$display_name/mods.conf"
+    echo "# Format: id|name|enabled" >> "$MAPS_DIR/$display_name/mods.conf"
+
     create_optimized_game_settings "$MAPS_DIR/$display_name" "high"
-
     [[ ! -f "$MAPS_DIR/$display_name/Game.ini" ]] && touch "$MAPS_DIR/$display_name/Game.ini"
-
     echo "${display_name}|${internal_name}|enabled" >> "$MAPS_CONF"
-
     create_systemd_service "$display_name"
     open_firewall_ports "$game_port" "$query_port" "$rcon_port"
 
-    log_ok "Map '${BLD}$display_name${R}${GRN}' created and ready!"
-    echo "  ${DIM}Start it from the dashboard or run: ${WHT}./ark-manager.sh start ${display_name}${R}"
+    FEEDBACK="${GRN}${BLD}✔${R} Map '${BLD}$display_name${R}' created and ready!"
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
@@ -610,12 +637,10 @@ create_optimized_game_settings() {
     mating=$(read_conf_value "$DEFAULTS_CONF" "MatingIntervalMultiplier" "1.0")
     baby=$(read_conf_value "$DEFAULTS_CONF" "BabyMatureSpeedMultiplier" "1.0")
     hatch=$(read_conf_value "$DEFAULTS_CONF" "EggHatchSpeedMultiplier" "1.0")
-
     local show_loc tp cross
     show_loc=$(read_conf_value "$DEFAULTS_CONF" "ShowMapPlayerLocation" "True")
     tp=$(read_conf_value "$DEFAULTS_CONF" "AllowThirdPersonPlayer" "True")
     cross=$(read_conf_value "$DEFAULTS_CONF" "ServerCrosshair" "True")
-
     local admin_pw rcon_port map_name max_players
     admin_pw=$(read_conf_value "$map_dir/map.conf" "AdminPassword" "")
     rcon_port=$(read_conf_value "$map_dir/map.conf" "RCONPort" "27020")
@@ -723,22 +748,18 @@ GUSEOF
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
-#  GRAPHICS PRESET MANAGEMENT
+#  GRAPHICS PRESETS
 #═══════════════════════════════════════════════════════════════════════════════
 
 apply_graphics_preset() {
-    local map="$1"
-    local preset="$2"
+    local map="$1" preset="$2"
     local ini="$MAPS_DIR/$map/GameUserSettings.ini"
-
     [[ ! -f "$ini" ]] && { log_err "GameUserSettings.ini not found for '$map'."; return 1; }
 
     local sg_val adv_q res_x res_y scr_pct fps_lim
-    local b_dfao b_ssao b_bloom b_dist_ao b_hi_aniso
-    local b_foot_dec b_foot_part b_fluid b_low_vfx b_prev_det
-    local gnd_dens gnd_rad hfs_q lod_s
-    local b_hi_mat b_hi_surf b_hi_lod b_ext_stream b_color_grad
-    local b_dyn_res b_low_stream
+    local b_dfao b_ssao b_bloom b_dist_ao b_hi_aniso b_foot_dec b_foot_part b_fluid
+    local b_low_vfx b_prev_det gnd_dens gnd_rad hfs_q lod_s
+    local b_hi_mat b_hi_surf b_hi_lod b_ext_stream b_color_grad b_dyn_res b_low_stream
     local fol_dist fol_limit fol_qty gui3d_q aud_q tiles b_dis_shad
 
     case "$preset" in
@@ -750,8 +771,7 @@ apply_graphics_preset() {
             b_hi_mat=False; b_hi_surf=False; b_hi_lod=False; b_ext_stream=False; b_color_grad=False
             b_dyn_res=False; b_low_stream=True
             fol_dist="0.010000"; fol_limit="0.100000"; fol_qty="0.100000"
-            gui3d_q="0.000000"; aud_q=0; tiles=5; b_dis_shad=True
-            ;;
+            gui3d_q="0.000000"; aud_q=0; tiles=5; b_dis_shad=True ;;
         medium)
             sg_val=2; adv_q=2; res_x=1280; res_y=720; scr_pct="75.000000"; fps_lim="60.000000"
             b_dfao=False; b_ssao=True; b_bloom=False; b_dist_ao=False; b_hi_aniso=False
@@ -760,8 +780,7 @@ apply_graphics_preset() {
             b_hi_mat=False; b_hi_surf=False; b_hi_lod=False; b_ext_stream=False; b_color_grad=True
             b_dyn_res=False; b_low_stream=False
             fol_dist="0.500000"; fol_limit="1.000000"; fol_qty="0.500000"
-            gui3d_q="50.000000"; aud_q=1; tiles=10; b_dis_shad=False
-            ;;
+            gui3d_q="50.000000"; aud_q=1; tiles=10; b_dis_shad=False ;;
         high)
             sg_val=3; adv_q=3; res_x=1920; res_y=1080; scr_pct="100.000000"; fps_lim="0.000000"
             b_dfao=True; b_ssao=True; b_bloom=False; b_dist_ao=True; b_hi_aniso=True
@@ -770,8 +789,7 @@ apply_graphics_preset() {
             b_hi_mat=True; b_hi_surf=True; b_hi_lod=True; b_ext_stream=True; b_color_grad=True
             b_dyn_res=False; b_low_stream=False
             fol_dist="1.000000"; fol_limit="1.000000"; fol_qty="1.000000"
-            gui3d_q="100.000000"; aud_q=2; tiles=20; b_dis_shad=False
-            ;;
+            gui3d_q="100.000000"; aud_q=2; tiles=20; b_dis_shad=False ;;
         auto)
             sg_val=3; adv_q=3; res_x=1920; res_y=1080; scr_pct="100.000000"; fps_lim="0.000000"
             b_dfao=True; b_ssao=True; b_bloom=False; b_dist_ao=True; b_hi_aniso=True
@@ -780,9 +798,8 @@ apply_graphics_preset() {
             b_hi_mat=True; b_hi_surf=True; b_hi_lod=True; b_ext_stream=True; b_color_grad=True
             b_dyn_res=True; b_low_stream=False
             fol_dist="1.000000"; fol_limit="1.000000"; fol_qty="1.000000"
-            gui3d_q="100.000000"; aud_q=2; tiles=20; b_dis_shad=False
-            ;;
-        *) log_err "Unknown preset: $preset (use: low, medium, high, auto)"; return 1 ;;
+            gui3d_q="100.000000"; aud_q=2; tiles=20; b_dis_shad=False ;;
+        *) log_err "Unknown preset: $preset"; return 1 ;;
     esac
 
     for key in ResolutionQuality ViewDistanceQuality AntiAliasingQuality ShadowQuality \
@@ -790,7 +807,6 @@ apply_graphics_preset() {
                EffectsQuality FoliageQuality ShadingQuality LandscapeQuality; do
         sed -i "s/^sg\.${key}=.*/sg.${key}=$sg_val/" "$ini"
     done
-
     sed -i "s/^AdvancedGraphicsQuality=.*/AdvancedGraphicsQuality=$adv_q/" "$ini"
     sed -i "s/^bUseDFAO=.*/bUseDFAO=$b_dfao/" "$ini"
     sed -i "s/^bUseSSAO=.*/bUseSSAO=$b_ssao/" "$ini"
@@ -824,7 +840,6 @@ apply_graphics_preset() {
     sed -i "s/^AudioQualityLevel=.*/AudioQualityLevel=$aud_q/" "$ini"
     sed -i "s/^ActiveLingeringWorldTiles=.*/ActiveLingeringWorldTiles=$tiles/" "$ini"
     sed -i "s/^bDisableShadows=.*/bDisableShadows=$b_dis_shad/" "$ini"
-
     [[ -f "$MAPS_DIR/$map/map.conf" ]] && write_conf_value "$MAPS_DIR/$map/map.conf" "GraphicsPreset" "$preset"
 
     log_ok "Graphics preset '${BLD}$preset${R}${GRN}' applied to ${BLD}$map${R}${GRN}. Restart to take effect."
@@ -832,25 +847,22 @@ apply_graphics_preset() {
 
 graphics_preset_menu() {
     local map="$1"
-    local conf="$MAPS_DIR/$map/map.conf"
-    local current_preset
-    current_preset=$(read_conf_value "$conf" "GraphicsPreset" "high")
-
+    local current; current=$(read_conf_value "$MAPS_DIR/$map/map.conf" "GraphicsPreset" "high")
+    clear
     echo ""
     echo "  ${BLD}${MAG}═══ Graphics Preset — ${CYN}$map${MAG} ═══${R}"
     thin_sep
-    echo "  Current: ${BLD}${CYN}$current_preset${R}"
+    echo "  Current: ${BLD}${CYN}$current${R}"
     echo ""
-    echo "  ${CYN}1${R}) ${RED}Low${R}       ${DIM}— Max performance, 640×480, 30fps cap, all effects off${R}"
+    echo "  ${CYN}1${R}) ${RED}Low${R}       ${DIM}— Max performance, 640×480, 30fps cap${R}"
     echo "  ${CYN}2${R}) ${YEL}Medium${R}    ${DIM}— Balanced, 1280×720, 60fps cap${R}"
     echo "  ${CYN}3${R}) ${GRN}High${R}      ${DIM}— Max quality, 1920×1080, unlimited fps${R}"
-    echo "  ${CYN}4${R}) ${BLU}Auto${R}      ${DIM}— High + dynamic resolution (auto-adjusts)${R}"
+    echo "  ${CYN}4${R}) ${BLU}Auto${R}      ${DIM}— High + dynamic resolution${R}"
     echo ""
     echo "  ${DIM}0) Back${R}"
     echo ""
     echo -n "  ${WHT}Choice: ${R}"
     read -r choice
-
     case "$choice" in
         1) apply_graphics_preset "$map" "low" ;;
         2) apply_graphics_preset "$map" "medium" ;;
@@ -859,6 +871,7 @@ graphics_preset_menu() {
         0|"") return ;;
         *) log_err "Invalid choice." ;;
     esac
+    sleep 1
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
@@ -869,9 +882,7 @@ create_systemd_service() {
     local map="$1"
     local service_name="ark-${map,,}.service"
     local service_file="/etc/systemd/system/$service_name"
-
     log_info "Creating systemd service: ${BLD}$service_name${R}"
-
     sudo tee "$service_file" > /dev/null <<SVCEOF
 [Unit]
 Description=ARK ASA Server - $map
@@ -890,14 +901,15 @@ Restart=on-failure
 RestartSec=30
 TimeoutStartSec=300
 TimeoutStopSec=180
+MemoryAccounting=true
+CPUAccounting=true
 
 [Install]
 WantedBy=multi-user.target
 SVCEOF
-
     sudo systemctl daemon-reload
     sudo systemctl enable "$service_name" 2>/dev/null || true
-    log_ok "Service '${BLD}$service_name${R}${GRN}' created and enabled."
+    log_ok "Service '${BLD}$service_name${R}${GRN}' created."
 }
 
 open_firewall_ports() {
@@ -907,8 +919,202 @@ open_firewall_ports() {
         sudo ufw allow "$(( game_port + 1 ))/udp" 2>/dev/null || true
         sudo ufw allow "${query_port}/udp" 2>/dev/null || true
         sudo ufw allow "${rcon_port}/tcp" 2>/dev/null || true
-        log_ok "Firewall ports opened: ${BLD}${game_port}-$(( game_port + 1 ))/udp, ${query_port}/udp, ${rcon_port}/tcp${R}"
     fi
+}
+
+#═══════════════════════════════════════════════════════════════════════════════
+#  MOD MANAGEMENT (mods.conf per map, with names + toggle)
+#═══════════════════════════════════════════════════════════════════════════════
+
+# Fetch mod name from Steam Workshop API
+fetch_mod_name() {
+    local mod_id="$1"
+    local name
+    name=$(curl -sf --max-time 5 -X POST \
+        "https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/" \
+        -d "itemcount=1&publishedfileids[0]=$mod_id" 2>/dev/null | \
+        python3 -c "import sys,json; d=json.load(sys.stdin); print(d['response']['publishedfiledetails'][0].get('title',''))" 2>/dev/null)
+    echo "${name:-}"
+}
+
+# Initialize mods.conf from legacy ModIDs if needed
+init_mods_conf() {
+    local map="$1"
+    local mods_file="$MAPS_DIR/$map/mods.conf"
+    [[ -f "$mods_file" ]] && return
+
+    echo "# Mod configuration for $map" > "$mods_file"
+    echo "# Format: id|name|enabled" >> "$mods_file"
+
+    local old_ids
+    old_ids=$(read_conf_value "$MAPS_DIR/$map/map.conf" "ModIDs" "")
+    if [[ -n "$old_ids" ]]; then
+        IFS=',' read -ra ids <<< "$old_ids"
+        for id in "${ids[@]}"; do
+            id=$(echo "$id" | tr -d ' ')
+            [[ -z "$id" ]] && continue
+            local name; name=$(fetch_mod_name "$id")
+            echo "${id}|${name}|true" >> "$mods_file"
+        done
+    fi
+}
+
+# Get comma-separated list of enabled mod IDs
+get_enabled_mod_ids() {
+    local map="$1"
+    local mods_file="$MAPS_DIR/$map/mods.conf"
+    if [[ ! -f "$mods_file" ]]; then
+        read_conf_value "$MAPS_DIR/$map/map.conf" "ModIDs" ""
+        return
+    fi
+    local ids=()
+    while IFS='|' read -r id name enabled; do
+        [[ "$id" =~ ^#.*$ || -z "$id" ]] && continue
+        [[ "$enabled" == "true" ]] && ids+=("$id")
+    done < "$mods_file"
+    local IFS=','
+    echo "${ids[*]}"
+}
+
+manage_mods() {
+    local map="$1"
+    init_mods_conf "$map"
+    local mods_file="$MAPS_DIR/$map/mods.conf"
+
+    while true; do
+        clear
+        echo ""
+        echo "  ${BLD}${MAG}═══ Mod Management — ${CYN}$map${MAG} ═══${R}"
+        thin_sep
+
+        # Read and display mods
+        local mod_ids=() mod_names=() mod_enabled=() mod_count=0
+        while IFS='|' read -r id name enabled; do
+            [[ "$id" =~ ^#.*$ || -z "$id" ]] && continue
+            mod_ids+=("$id")
+            mod_names+=("${name:-???}")
+            mod_enabled+=("$enabled")
+            ((mod_count++))
+        done < "$mods_file"
+
+        if (( mod_count > 0 )); then
+            echo ""
+            printf "  ${BLD}${WHT}  %-4s %-12s %-30s %s${R}\n" "#" "ID" "Name" "Status"
+            thin_sep
+            for idx in "${!mod_ids[@]}"; do
+                local stat_icon
+                if [[ "${mod_enabled[$idx]}" == "true" ]]; then
+                    stat_icon="${GRN}${BLD}✔ ON${R}"
+                else
+                    stat_icon="${RED}✖ OFF${R}"
+                fi
+                printf "  ${CYN}%3d${R}) %-12s %-30s %s\n" "$((idx+1))" "${mod_ids[$idx]}" "${mod_names[$idx]}" "$stat_icon"
+            done
+        else
+            echo ""
+            echo "  ${DIM}No mods installed.${R}"
+        fi
+
+        echo ""
+        echo "  ${CYN}a${R}) Add mod(s)"
+        echo "  ${CYN}r${R}) Remove mod"
+        echo "  ${CYN}t${R}) Toggle mod on/off"
+        echo "  ${CYN}n${R}) Rename mod"
+        echo "  ${CYN}f${R}) Fetch all names from Steam"
+        echo ""
+        echo "  ${DIM}0) Back${R}"
+        echo ""
+        echo -n "  ${WHT}Choice: ${R}"
+        read -r choice
+
+        case "$choice" in
+            a|A)
+                echo -n "  ${WHT}Mod ID(s) to add (comma-separated): ${R}"
+                read -r new_ids
+                [[ -z "$new_ids" ]] && continue
+                IFS=',' read -ra id_arr <<< "$new_ids"
+                for id in "${id_arr[@]}"; do
+                    id=$(echo "$id" | tr -d ' ')
+                    [[ -z "$id" ]] && continue
+                    # Check if already exists
+                    if grep -q "^${id}|" "$mods_file" 2>/dev/null; then
+                        log_warn "Mod $id already exists, skipping."
+                        continue
+                    fi
+                    log_info "Fetching name for mod ${BLD}$id${R}..."
+                    local name; name=$(fetch_mod_name "$id")
+                    echo "${id}|${name}|true" >> "$mods_file"
+                    if [[ -n "$name" ]]; then
+                        log_ok "Added: ${BLD}$id${R} — ${CYN}$name${R}"
+                    else
+                        log_ok "Added: ${BLD}$id${R} ${DIM}(no name found)${R}"
+                    fi
+                done
+                sleep 1
+                ;;
+            r|R)
+                (( mod_count == 0 )) && continue
+                echo -n "  ${WHT}Mod # to remove: ${R}"
+                read -r num
+                if (( num > 0 && num <= mod_count )) 2>/dev/null; then
+                    local del_id="${mod_ids[$((num-1))]}"
+                    sed -i "/^${del_id}|/d" "$mods_file"
+                    log_ok "Removed mod ${BLD}$del_id${R}"
+                    sleep 1
+                fi
+                ;;
+            t|T)
+                (( mod_count == 0 )) && continue
+                echo -n "  ${WHT}Mod # to toggle: ${R}"
+                read -r num
+                if (( num > 0 && num <= mod_count )) 2>/dev/null; then
+                    local tog_id="${mod_ids[$((num-1))]}"
+                    local cur_state="${mod_enabled[$((num-1))]}"
+                    if [[ "$cur_state" == "true" ]]; then
+                        sed -i "s/^${tog_id}|\(.*\)|true$/${tog_id}|\1|false/" "$mods_file"
+                        log_ok "Mod ${BLD}$tog_id${R} → ${RED}OFF${R}"
+                    else
+                        sed -i "s/^${tog_id}|\(.*\)|false$/${tog_id}|\1|true/" "$mods_file"
+                        log_ok "Mod ${BLD}$tog_id${R} → ${GRN}ON${R}"
+                    fi
+                    sleep 1
+                fi
+                ;;
+            n|N)
+                (( mod_count == 0 )) && continue
+                echo -n "  ${WHT}Mod # to rename: ${R}"
+                read -r num
+                if (( num > 0 && num <= mod_count )) 2>/dev/null; then
+                    local ren_id="${mod_ids[$((num-1))]}"
+                    local ren_en="${mod_enabled[$((num-1))]}"
+                    echo -n "  ${WHT}New name: ${R}"
+                    read -r new_name
+                    [[ -z "$new_name" ]] && continue
+                    sed -i "s/^${ren_id}|.*$/${ren_id}|${new_name}|${ren_en}/" "$mods_file"
+                    log_ok "Renamed mod ${BLD}$ren_id${R} → ${CYN}$new_name${R}"
+                    sleep 1
+                fi
+                ;;
+            f|F)
+                (( mod_count == 0 )) && continue
+                log_info "Fetching mod names from Steam Workshop..."
+                for idx in "${!mod_ids[@]}"; do
+                    local fid="${mod_ids[$idx]}"
+                    local fen="${mod_enabled[$idx]}"
+                    local fname; fname=$(fetch_mod_name "$fid")
+                    if [[ -n "$fname" ]]; then
+                        sed -i "s/^${fid}|.*$/${fid}|${fname}|${fen}/" "$mods_file"
+                        log_ok "${BLD}$fid${R} → ${CYN}$fname${R}"
+                    else
+                        log_warn "${BLD}$fid${R} — no name found"
+                    fi
+                done
+                sleep 1
+                ;;
+            0|"") return ;;
+            *) ;;
+        esac
+    done
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
@@ -918,18 +1124,15 @@ open_firewall_ports() {
 start_map() {
     local map="$1"
     local conf="$MAPS_DIR/$map/map.conf"
-
     [[ ! -f "$conf" ]] && { log_err "Map '$map' not found."; return 1; }
-
     if is_map_running "$map"; then
         log_warn "Map '${BLD}$map${R}' is already running."
         return 0
     fi
-
     check_cpu_flags || return 1
 
     local map_name save_dir game_port query_port rcon_port max_players
-    local admin_pw server_pw mod_ids custom_params cluster_id
+    local admin_pw server_pw custom_params cluster_id
     map_name=$(read_conf_value "$conf" "MapName")
     save_dir=$(read_conf_value "$conf" "SaveDir" "$map")
     game_port=$(read_conf_value "$conf" "GamePort" "7777")
@@ -938,9 +1141,11 @@ start_map() {
     max_players=$(read_conf_value "$conf" "MaxPlayers" "70")
     admin_pw=$(read_conf_value "$conf" "AdminPassword" "")
     server_pw=$(read_conf_value "$conf" "ServerPassword" "")
-    mod_ids=$(read_conf_value "$conf" "ModIDs" "")
     custom_params=$(read_conf_value "$conf" "CustomStartParams" "-NoBattlEye -crossplay -NoHangDetection")
     cluster_id=$(read_conf_value "$conf" "ClusterID" "")
+
+    # Get enabled mods
+    local mod_ids; mod_ids=$(get_enabled_mod_ids "$map")
 
     if ss -lunp 2>/dev/null | grep -q ":${game_port} "; then
         log_err "Port ${BLD}$game_port${R} is already in use!"
@@ -954,15 +1159,11 @@ start_map() {
     export SteamAppId=$ARK_APPID
     export SteamGameId=$ARK_APPID
 
-    # Link config directory
     local config_src="$MAPS_DIR/$map"
     local config_dst="$SERVER_DIR/ShooterGame/Saved/Config/WindowsServer"
-    if [[ -d "$config_dst" && ! -L "$config_dst" ]]; then
-        mv "$config_dst" "${config_dst}.bak.$(date +%s)" || true
-    fi
+    [[ -d "$config_dst" && ! -L "$config_dst" ]] && mv "$config_dst" "${config_dst}.bak.$(date +%s)" || true
     rm -f "$config_dst"
     ln -s "$config_src" "$config_dst"
-
     mkdir -p "$SERVER_DIR/ShooterGame/Saved/SavedArks/$save_dir"
 
     local cluster_args=""
@@ -973,72 +1174,52 @@ start_map() {
     fi
 
     local nullrhi=""
-    local use_null
-    use_null=$(read_conf_value "$OPT_CONF" "UseNullRHI" "true")
+    local use_null; use_null=$(read_conf_value "$OPT_CONF" "UseNullRHI" "true")
     [[ "$use_null" == "true" ]] && nullrhi="-nullrhi"
-
-    local nice_lvl
-    nice_lvl=$(read_conf_value "$OPT_CONF" "ServerNiceLevel" "-5")
+    local nice_lvl; nice_lvl=$(read_conf_value "$OPT_CONF" "ServerNiceLevel" "-5")
 
     nice $nice_lvl "$PROTON_DIR/proton" run \
         "$SERVER_DIR/ShooterGame/Binaries/Win64/ArkAscendedServer.exe" \
         "${map_name}?listen?SessionName=${map} ?ServerPassword=${server_pw}?RCONEnabled=True?ServerAdminPassword=${admin_pw}?AltSaveDirectoryName=${save_dir}" \
-        $custom_params \
-        $nullrhi \
+        $custom_params $nullrhi \
         -WinLiveMaxPlayers=$max_players \
-        -Port=$game_port \
-        -QueryPort=$query_port \
-        -RCONPort=$rcon_port \
-        -game \
-        $cluster_args \
-        -server \
-        -log \
+        -Port=$game_port -QueryPort=$query_port -RCONPort=$rcon_port \
+        -game $cluster_args -server -log \
         -mods="$mod_ids" \
         > "$MAPS_DIR/$map/server.log" 2>&1 &
 
-    log_ok "Map '${BLD}$map${R}${GRN}' starting... Should be online in ~60 seconds."
+    log_ok "Map '${BLD}$map${R}${GRN}' starting... ~60 seconds to come online."
 }
 
 stop_map() {
     local map="$1"
     local conf="$MAPS_DIR/$map/map.conf"
-
     [[ ! -f "$conf" ]] && { log_err "Map '$map' not found."; return 1; }
-
     if ! is_map_running "$map"; then
         log_warn "Map '${BLD}$map${R}' is not running."
         return 0
     fi
-
     local save_dir admin_pw rcon_port
     save_dir=$(read_conf_value "$conf" "SaveDir" "$map")
     admin_pw=$(read_conf_value "$conf" "AdminPassword" "")
     rcon_port=$(read_conf_value "$conf" "RCONPort" "27020")
 
     log_info "Stopping map '${BLD}$map${R}'..."
-
     local response=""
     response=$(python3 "$RCON_SCRIPT" "localhost:$rcon_port" -p "$admin_pw" -c "DoExit" 2>/dev/null || echo "")
-
     if [[ "$response" == *"Exiting"* ]]; then
-        log_info "Server acknowledged exit. Waiting for graceful shutdown..."
+        log_info "Waiting for graceful shutdown..."
         local waited=0
         while pgrep -f "ArkAscendedServer.exe.*AltSaveDirectoryName=${save_dir}" &>/dev/null; do
-            sleep 2
-            (( waited += 2 ))
-            if (( waited >= 120 )); then
-                log_warn "Timeout after ${waited}s. Force killing..."
-                pkill -9 -f "ArkAscendedServer.exe.*AltSaveDirectoryName=${save_dir}" || true
-                break
-            fi
+            sleep 2; (( waited += 2 ))
+            (( waited >= 120 )) && { log_warn "Timeout. Force killing..."; pkill -9 -f "ArkAscendedServer.exe.*AltSaveDirectoryName=${save_dir}" || true; break; }
         done
     else
-        log_warn "RCON graceful exit failed. Force stopping..."
+        log_warn "RCON failed. Force stopping..."
         pkill -f "ArkAscendedServer.exe.*AltSaveDirectoryName=${save_dir}" || true
         sleep 3
         pkill -9 -f "ArkAscendedServer.exe.*AltSaveDirectoryName=${save_dir}" 2>/dev/null || true
     fi
-
     pkill -f "wineserver.*${save_dir}" 2>/dev/null || true
     log_ok "Map '${BLD}$map${R}${GRN}' stopped."
 }
@@ -1051,21 +1232,33 @@ restart_map() {
 }
 
 start_all_maps() {
-    local maps
-    maps=( $(get_maps) )
+    local maps; maps=( $(get_maps) )
     (( ${#maps[@]} == 0 )) && { log_warn "No maps configured."; return; }
+    local started=0
     for map in "${maps[@]}"; do
-        start_map "$map"
-        sleep 5
+        if is_batch_enabled "$map"; then
+            start_map "$map"
+            ((started++))
+            sleep 5
+        else
+            log_info "Skipping ${BLD}$map${R} ${DIM}(batch disabled)${R}"
+        fi
     done
+    log_ok "Started ${BLD}$started${R}${GRN} batch-enabled maps."
 }
 
 stop_all_maps() {
-    local maps
-    maps=( $(get_maps) )
+    local maps; maps=( $(get_maps) )
+    local stopped=0
     for map in "${maps[@]}"; do
-        is_map_running "$map" && stop_map "$map"
+        if is_batch_enabled "$map" && is_map_running "$map"; then
+            stop_map "$map"
+            ((stopped++))
+        elif is_map_running "$map"; then
+            log_info "Skipping ${BLD}$map${R} ${DIM}(batch disabled)${R}"
+        fi
     done
+    log_ok "Stopped ${BLD}$stopped${R}${GRN} batch-enabled maps."
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
@@ -1075,23 +1268,21 @@ stop_all_maps() {
 rcon_console() {
     local map="$1"
     if ! is_map_running "$map"; then
-        log_err "Map '${BLD}$map${R}' is not running."
-        return 1
+        log_err "Map '${BLD}$map${R}' is not running."; return 1
     fi
     local rcon_port admin_pw
     rcon_port=$(read_conf_value "$MAPS_DIR/$map/map.conf" "RCONPort" "27020")
     admin_pw=$(read_conf_value "$MAPS_DIR/$map/map.conf" "AdminPassword" "")
-    log_info "Connecting RCON to ${BLD}$map${R} on port ${CYN}$rcon_port${R}..."
+    clear
+    log_info "RCON connected to ${BLD}$map${R}:${CYN}$rcon_port${R}"
     echo "  ${DIM}Type 'exit' or Ctrl+C to disconnect${R}"
+    separator
     python3 "$RCON_SCRIPT" "localhost:$rcon_port" -p "$admin_pw"
 }
 
 send_rcon() {
     local map="$1" cmd="$2"
-    if ! is_map_running "$map"; then
-        log_err "Map '${BLD}$map${R}' is not running."
-        return 1
-    fi
+    if ! is_map_running "$map"; then log_err "Map '$map' is not running."; return 1; fi
     local rcon_port admin_pw
     rcon_port=$(read_conf_value "$MAPS_DIR/$map/map.conf" "RCONPort" "27020")
     admin_pw=$(read_conf_value "$MAPS_DIR/$map/map.conf" "AdminPassword" "")
@@ -1100,8 +1291,7 @@ send_rcon() {
 
 broadcast_message() {
     local message="$1"
-    local maps
-    maps=( $(get_maps) )
+    local maps; maps=( $(get_maps) )
     for map in "${maps[@]}"; do
         is_map_running "$map" && send_rcon "$map" "ServerChat $message" 2>/dev/null || true
     done
@@ -1109,81 +1299,7 @@ broadcast_message() {
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
-#  MOD MANAGEMENT (proper loop with back)
-#═══════════════════════════════════════════════════════════════════════════════
-
-manage_mods() {
-    local map="$1"
-    local conf="$MAPS_DIR/$map/map.conf"
-
-    while true; do
-        local current_mods
-        current_mods=$(read_conf_value "$conf" "ModIDs" "")
-
-        echo ""
-        echo "  ${BLD}${MAG}═══ Mod Management — ${CYN}$map${MAG} ═══${R}"
-        thin_sep
-        if [[ -n "$current_mods" ]]; then
-            echo "  Installed: ${CYN}${BLD}$current_mods${R}"
-        else
-            echo "  ${DIM}No mods installed.${R}"
-        fi
-        echo ""
-        echo "  ${CYN}1${R}) Add mod(s)"
-        echo "  ${CYN}2${R}) Remove mod(s)"
-        echo "  ${CYN}3${R}) Clear all mods"
-        echo ""
-        echo "  ${DIM}0) Back${R}"
-        echo ""
-        echo -n "  ${WHT}Choice: ${R}"
-        read -r choice
-
-        case "$choice" in
-            1)
-                echo -n "  ${WHT}Mod ID(s) to add (comma-separated): ${R}"
-                read -r new_mods
-                [[ -z "$new_mods" ]] && continue
-                if [[ -n "$current_mods" ]]; then
-                    current_mods="${current_mods},${new_mods}"
-                else
-                    current_mods="$new_mods"
-                fi
-                write_conf_value "$conf" "ModIDs" "$current_mods"
-                log_ok "Mods updated. Restart to apply."
-                ;;
-            2)
-                echo -n "  ${WHT}Mod ID(s) to remove (comma-separated): ${R}"
-                read -r remove_mods
-                [[ -z "$remove_mods" ]] && continue
-                IFS=',' read -ra remove_arr <<< "$remove_mods"
-                IFS=',' read -ra current_arr <<< "$current_mods"
-                local new_arr=()
-                for mod in "${current_arr[@]}"; do
-                    local keep=true
-                    for rm_mod in "${remove_arr[@]}"; do
-                        [[ "$mod" == "$rm_mod" ]] && keep=false
-                    done
-                    $keep && new_arr+=("$mod")
-                done
-                local result
-                result=$(IFS=,; echo "${new_arr[*]}")
-                write_conf_value "$conf" "ModIDs" "$result"
-                log_ok "Mods updated. Restart to apply."
-                ;;
-            3)
-                if confirm "Clear all mods?"; then
-                    write_conf_value "$conf" "ModIDs" ""
-                    log_ok "All mods cleared. Restart to apply."
-                fi
-                ;;
-            0|"") return ;;
-            *) log_err "Invalid choice." ;;
-        esac
-    done
-}
-
-#═══════════════════════════════════════════════════════════════════════════════
-#  SERVER SETTINGS (per-map, with back on empty input + file access)
+#  SERVER SETTINGS (per-map)
 #═══════════════════════════════════════════════════════════════════════════════
 
 server_settings_menu() {
@@ -1191,12 +1307,11 @@ server_settings_menu() {
     local gus="$MAPS_DIR/$map/GameUserSettings.ini"
 
     while true; do
+        clear
         echo ""
         echo "  ${BLD}${MAG}═══ Server Settings — ${CYN}$map${MAG} ═══${R}"
-        thin_sep
 
-        local xp taming harvest respawn mating baby hatch stack
-        local max_tamed auto_save max_struct
+        local xp taming harvest respawn mating baby hatch stack max_tamed auto_save max_struct
         xp=$(read_conf_value "$gus" "XPMultiplier" "1.0")
         taming=$(read_conf_value "$gus" "TamingSpeedMultiplier" "1.0")
         harvest=$(read_conf_value "$gus" "HarvestAmountMultiplier" "1.0")
@@ -1229,7 +1344,7 @@ server_settings_menu() {
         echo "  ${CYN}12${R}) Graphics Preset              ${DIM}(low/medium/high/auto)${R}"
         echo "  ${CYN}13${R}) Edit GameUserSettings.ini    ${DIM}(nano)${R}"
         echo "  ${CYN}14${R}) Edit Game.ini                ${DIM}(nano)${R}"
-        echo "  ${CYN}15${R}) Edit map.conf                ${DIM}(ports/passwords/params)${R}"
+        echo "  ${CYN}15${R}) Edit map.conf                ${DIM}(ports/passwords)${R}"
         echo ""
         echo "  ${DIM} 0) Back${R}"
         echo ""
@@ -1237,34 +1352,34 @@ server_settings_menu() {
         read -r choice
 
         case "$choice" in
-            1)  echo -n "  ${WHT}New XP Multiplier ${DIM}(empty=cancel)${R}: "; read -r val
-                [[ -n "$val" ]] && { write_conf_value "$gus" "XPMultiplier" "$val"; log_ok "Saved. Restart to apply."; } ;;
-            2)  echo -n "  ${WHT}New Taming Speed ${DIM}(empty=cancel)${R}: "; read -r val
-                [[ -n "$val" ]] && { write_conf_value "$gus" "TamingSpeedMultiplier" "$val"; log_ok "Saved. Restart to apply."; } ;;
-            3)  echo -n "  ${WHT}New Harvest Amount ${DIM}(empty=cancel)${R}: "; read -r val
-                [[ -n "$val" ]] && { write_conf_value "$gus" "HarvestAmountMultiplier" "$val"; log_ok "Saved. Restart to apply."; } ;;
-            4)  echo -n "  ${WHT}New Resource Respawn ${DIM}(empty=cancel)${R}: "; read -r val
-                [[ -n "$val" ]] && { write_conf_value "$gus" "ResourcesRespawnPeriodMultiplier" "$val"; log_ok "Saved. Restart to apply."; } ;;
-            5)  echo -n "  ${WHT}New Mating Interval ${DIM}(empty=cancel)${R}: "; read -r val
-                [[ -n "$val" ]] && { write_conf_value "$gus" "MatingIntervalMultiplier" "$val"; log_ok "Saved. Restart to apply."; } ;;
-            6)  echo -n "  ${WHT}New Baby Mature Speed ${DIM}(empty=cancel)${R}: "; read -r val
-                [[ -n "$val" ]] && { write_conf_value "$gus" "BabyMatureSpeedMultiplier" "$val"; log_ok "Saved. Restart to apply."; } ;;
-            7)  echo -n "  ${WHT}New Egg Hatch Speed ${DIM}(empty=cancel)${R}: "; read -r val
-                [[ -n "$val" ]] && { write_conf_value "$gus" "EggHatchSpeedMultiplier" "$val"; log_ok "Saved. Restart to apply."; } ;;
-            8)  echo -n "  ${WHT}New Item Stack Size ${DIM}(empty=cancel)${R}: "; read -r val
-                [[ -n "$val" ]] && { write_conf_value "$gus" "ItemStackSizeMultiplier" "$val"; log_ok "Saved. Restart to apply."; } ;;
-            9)  echo -n "  ${WHT}New Max Tamed Dinos ${DIM}(empty=cancel)${R}: "; read -r val
-                [[ -n "$val" ]] && { write_conf_value "$gus" "MaxTamedDinos" "$val"; log_ok "Saved. Restart to apply."; } ;;
-            10) echo -n "  ${WHT}New Auto-Save (min) ${DIM}(empty=cancel)${R}: "; read -r val
-                [[ -n "$val" ]] && { write_conf_value "$gus" "AutoSavePeriodMinutes" "$val"; log_ok "Saved. Restart to apply."; } ;;
-            11) echo -n "  ${WHT}New Max Structures ${DIM}(empty=cancel)${R}: "; read -r val
-                [[ -n "$val" ]] && { write_conf_value "$gus" "TheMaxStructuresInRange" "$val"; log_ok "Saved. Restart to apply."; } ;;
+            1)  echo -n "  ${WHT}New value ${DIM}(empty=cancel)${R}: "; read -r val
+                [[ -n "$val" ]] && { write_conf_value "$gus" "XPMultiplier" "$val"; log_ok "Saved."; sleep 0.5; } ;;
+            2)  echo -n "  ${WHT}New value ${DIM}(empty=cancel)${R}: "; read -r val
+                [[ -n "$val" ]] && { write_conf_value "$gus" "TamingSpeedMultiplier" "$val"; log_ok "Saved."; sleep 0.5; } ;;
+            3)  echo -n "  ${WHT}New value ${DIM}(empty=cancel)${R}: "; read -r val
+                [[ -n "$val" ]] && { write_conf_value "$gus" "HarvestAmountMultiplier" "$val"; log_ok "Saved."; sleep 0.5; } ;;
+            4)  echo -n "  ${WHT}New value ${DIM}(empty=cancel)${R}: "; read -r val
+                [[ -n "$val" ]] && { write_conf_value "$gus" "ResourcesRespawnPeriodMultiplier" "$val"; log_ok "Saved."; sleep 0.5; } ;;
+            5)  echo -n "  ${WHT}New value ${DIM}(empty=cancel)${R}: "; read -r val
+                [[ -n "$val" ]] && { write_conf_value "$gus" "MatingIntervalMultiplier" "$val"; log_ok "Saved."; sleep 0.5; } ;;
+            6)  echo -n "  ${WHT}New value ${DIM}(empty=cancel)${R}: "; read -r val
+                [[ -n "$val" ]] && { write_conf_value "$gus" "BabyMatureSpeedMultiplier" "$val"; log_ok "Saved."; sleep 0.5; } ;;
+            7)  echo -n "  ${WHT}New value ${DIM}(empty=cancel)${R}: "; read -r val
+                [[ -n "$val" ]] && { write_conf_value "$gus" "EggHatchSpeedMultiplier" "$val"; log_ok "Saved."; sleep 0.5; } ;;
+            8)  echo -n "  ${WHT}New value ${DIM}(empty=cancel)${R}: "; read -r val
+                [[ -n "$val" ]] && { write_conf_value "$gus" "ItemStackSizeMultiplier" "$val"; log_ok "Saved."; sleep 0.5; } ;;
+            9)  echo -n "  ${WHT}New value ${DIM}(empty=cancel)${R}: "; read -r val
+                [[ -n "$val" ]] && { write_conf_value "$gus" "MaxTamedDinos" "$val"; log_ok "Saved."; sleep 0.5; } ;;
+            10) echo -n "  ${WHT}New value ${DIM}(empty=cancel)${R}: "; read -r val
+                [[ -n "$val" ]] && { write_conf_value "$gus" "AutoSavePeriodMinutes" "$val"; log_ok "Saved."; sleep 0.5; } ;;
+            11) echo -n "  ${WHT}New value ${DIM}(empty=cancel)${R}: "; read -r val
+                [[ -n "$val" ]] && { write_conf_value "$gus" "TheMaxStructuresInRange" "$val"; log_ok "Saved."; sleep 0.5; } ;;
             12) graphics_preset_menu "$map" ;;
             13) ${EDITOR:-nano} "$gus" ;;
             14) ${EDITOR:-nano} "$MAPS_DIR/$map/Game.ini" ;;
             15) ${EDITOR:-nano} "$MAPS_DIR/$map/map.conf" ;;
             0|"") return ;;
-            *) log_err "Invalid choice." ;;
+            *) ;;
         esac
     done
 }
@@ -1275,71 +1390,49 @@ server_settings_menu() {
 
 backup_map() {
     local map="$1"
-    local save_dir
-    save_dir=$(read_conf_value "$MAPS_DIR/$map/map.conf" "SaveDir" "$map")
+    local save_dir; save_dir=$(read_conf_value "$MAPS_DIR/$map/map.conf" "SaveDir" "$map")
     local source="$SERVER_DIR/ShooterGame/Saved/SavedArks/$save_dir"
     local backup_dir="$MAPS_DIR/$map/backups"
-    local timestamp
-    timestamp=$(date +%Y%m%d_%H%M%S)
-    local backup_file="$backup_dir/${map}_${timestamp}.tar.gz"
-
-    [[ ! -d "$source" ]] && { log_err "No save data found for '${BLD}$map${R}'."; return 1; }
-
+    local backup_file="$backup_dir/${map}_$(date +%Y%m%d_%H%M%S).tar.gz"
+    [[ ! -d "$source" ]] && { log_err "No save data for '${BLD}$map${R}'."; return 1; }
     mkdir -p "$backup_dir"
-    log_info "Backing up '${BLD}$map${R}' saves..."
+    log_info "Backing up '${BLD}$map${R}'..."
     tar -czf "$backup_file" -C "$SERVER_DIR/ShooterGame/Saved/SavedArks" "$save_dir"
-    local size
-    size=$(du -h "$backup_file" | cut -f1)
-    log_ok "Backup created: ${DIM}$backup_file${R} (${BLD}$size${R})"
+    local size; size=$(du -h "$backup_file" | cut -f1)
+    log_ok "Backup: ${DIM}$backup_file${R} (${BLD}$size${R})"
 }
 
 restore_map() {
     local map="$1"
     local backup_dir="$MAPS_DIR/$map/backups"
+    [[ ! -d "$backup_dir" ]] || [[ -z "$(ls -A "$backup_dir" 2>/dev/null)" ]] && { log_err "No backups for '${BLD}$map${R}'."; return 1; }
+    is_map_running "$map" && { log_err "Stop the map first!"; return 1; }
 
-    if [[ ! -d "$backup_dir" ]] || [[ -z "$(ls -A "$backup_dir" 2>/dev/null)" ]]; then
-        log_err "No backups found for '${BLD}$map${R}'."
-        return 1
-    fi
-
-    if is_map_running "$map"; then
-        log_err "Stop the map before restoring a backup!"
-        return 1
-    fi
-
+    clear
     echo ""
     echo "  ${BLD}${MAG}═══ Restore Backup — ${CYN}$map${MAG} ═══${R}"
     thin_sep
     local backups=()
     local i=1
     for f in "$backup_dir"/*.tar.gz; do
-        local size fname
-        size=$(du -h "$f" | cut -f1)
-        fname=$(basename "$f")
+        local size fname; size=$(du -h "$f" | cut -f1); fname=$(basename "$f")
         printf "  ${CYN}%2d${R}) %-40s ${DIM}(%s)${R}\n" "$i" "$fname" "$size"
-        backups+=("$f")
-        ((i++))
+        backups+=("$f"); ((i++))
     done
-    echo ""
-    echo "  ${DIM} 0) Back${R}"
-    echo ""
+    echo ""; echo "  ${DIM} 0) Back${R}"; echo ""
     echo -n "  ${WHT}Select backup: ${R}"
     read -r choice
-
     [[ "$choice" == "0" || -z "$choice" ]] && return 0
     (( choice < 1 || choice > ${#backups[@]} )) 2>/dev/null && return 0
 
-    local selected="${backups[$((choice-1))]}"
-    local save_dir
-    save_dir=$(read_conf_value "$MAPS_DIR/$map/map.conf" "SaveDir" "$map")
-    local target="$SERVER_DIR/ShooterGame/Saved/SavedArks"
-
-    if confirm "This will overwrite current save data for '${BLD}$map${R}'. Continue?"; then
+    local save_dir; save_dir=$(read_conf_value "$MAPS_DIR/$map/map.conf" "SaveDir" "$map")
+    if confirm "Overwrite current save data for '${BLD}$map${R}'?"; then
         log_info "Restoring backup..."
-        rm -rf "$target/$save_dir"
-        tar -xzf "$selected" -C "$target"
-        log_ok "Backup restored for '${BLD}$map${R}'!"
+        rm -rf "$SERVER_DIR/ShooterGame/Saved/SavedArks/$save_dir"
+        tar -xzf "${backups[$((choice-1))]}" -C "$SERVER_DIR/ShooterGame/Saved/SavedArks"
+        log_ok "Backup restored!"
     fi
+    sleep 1
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
@@ -1352,60 +1445,23 @@ view_logs() {
     local steam_log="$HOME/steam-${ARK_APPID}.log"
 
     while true; do
+        clear
         echo ""
         echo "  ${BLD}${MAG}═══ Logs — ${CYN}$map${MAG} ═══${R}"
         thin_sep
-        echo "  ${CYN}1${R}) View server log ${DIM}(last 50 lines)${R}"
-        echo "  ${CYN}2${R}) Follow server log ${DIM}(live — Ctrl+C to stop)${R}"
-        echo "  ${CYN}3${R}) View Steam/Proton log"
-        echo "  ${CYN}4${R}) View errors only"
-        echo ""
-        echo "  ${DIM}0) Back${R}"
-        echo ""
+        echo "  ${CYN}1${R}) Server log ${DIM}(last 50 lines)${R}"
+        echo "  ${CYN}2${R}) Follow log ${DIM}(live — Ctrl+C to stop)${R}"
+        echo "  ${CYN}3${R}) Steam/Proton log"
+        echo "  ${CYN}4${R}) Errors only"
+        echo ""; echo "  ${DIM}0) Back${R}"; echo ""
         echo -n "  ${WHT}Choice: ${R}"
         read -r choice
-
         case "$choice" in
-            1)
-                if [[ -f "$log_file" ]]; then
-                    echo ""; separator
-                    tail -50 "$log_file"
-                    separator
-                else
-                    log_warn "No log file found."
-                fi
-                press_enter
-                ;;
-            2)
-                if [[ -f "$log_file" ]]; then
-                    log_info "Press ${BLD}Ctrl+C${R} to stop following..."
-                    tail -f "$log_file" || true
-                else
-                    log_warn "No log file found."
-                fi
-                ;;
-            3)
-                if [[ -f "$steam_log" ]]; then
-                    separator
-                    tail -80 "$steam_log"
-                    separator
-                else
-                    log_warn "No Steam log found."
-                fi
-                press_enter
-                ;;
-            4)
-                if [[ -f "$log_file" ]]; then
-                    separator
-                    grep -iE "error|fatal|crash|exception|fail" "$log_file" | tail -30 || log_info "No errors found."
-                    separator
-                else
-                    log_warn "No log file found."
-                fi
-                press_enter
-                ;;
+            1) [[ -f "$log_file" ]] && { echo ""; separator; tail -50 "$log_file"; separator; } || log_warn "No log."; press_enter ;;
+            2) [[ -f "$log_file" ]] && { log_info "Ctrl+C to stop..."; tail -f "$log_file" || true; } || log_warn "No log." ;;
+            3) [[ -f "$steam_log" ]] && { separator; tail -80 "$steam_log"; separator; } || log_warn "No Steam log."; press_enter ;;
+            4) [[ -f "$log_file" ]] && { separator; grep -iE "error|fatal|crash|exception|fail" "$log_file" | tail -30 || log_info "No errors."; separator; } || log_warn "No log."; press_enter ;;
             0|"") return ;;
-            *) log_err "Invalid choice." ;;
         esac
     done
 }
@@ -1417,30 +1473,25 @@ view_logs() {
 browse_files() {
     local map="$1"
     while true; do
+        clear
         echo ""
         echo "  ${BLD}${MAG}═══ File Locations — ${CYN}$map${MAG} ═══${R}"
         thin_sep
         echo "  ${CYN}1${R}) Map config dir      ${DIM}$MAPS_DIR/$map/${R}"
-        echo "  ${CYN}2${R}) Server log           ${DIM}$MAPS_DIR/$map/server.log${R}"
-        echo "  ${CYN}3${R}) Save data            ${DIM}$SERVER_DIR/ShooterGame/Saved/SavedArks/$(read_conf_value "$MAPS_DIR/$map/map.conf" "SaveDir" "$map")/${R}"
-        echo "  ${CYN}4${R}) Backups              ${DIM}$MAPS_DIR/$map/backups/${R}"
-        echo "  ${CYN}5${R}) Server files         ${DIM}$SERVER_DIR/${R}"
-        echo "  ${CYN}6${R}) Open shell here"
-        echo ""
-        echo "  ${DIM}0) Back${R}"
-        echo ""
+        echo "  ${CYN}2${R}) Save data"
+        echo "  ${CYN}3${R}) Backups"
+        echo "  ${CYN}4${R}) Server files"
+        echo "  ${CYN}5${R}) Open shell here"
+        echo ""; echo "  ${DIM}0) Back${R}"; echo ""
         echo -n "  ${WHT}Choice: ${R}"
         read -r choice
-
         case "$choice" in
             1) echo ""; ls -la "$MAPS_DIR/$map/" 2>/dev/null; press_enter ;;
-            2) [[ -f "$MAPS_DIR/$map/server.log" ]] && less "$MAPS_DIR/$map/server.log" || log_warn "No log file."; press_enter ;;
-            3) ls -la "$SERVER_DIR/ShooterGame/Saved/SavedArks/$(read_conf_value "$MAPS_DIR/$map/map.conf" "SaveDir" "$map")/" 2>/dev/null; press_enter ;;
-            4) ls -la "$MAPS_DIR/$map/backups/" 2>/dev/null; press_enter ;;
-            5) ls -la "$SERVER_DIR/" 2>/dev/null; press_enter ;;
-            6) log_info "Dropping into shell at: ${BLD}$MAPS_DIR/$map/${R}"; cd "$MAPS_DIR/$map" && exec bash ;;
+            2) ls -la "$SERVER_DIR/ShooterGame/Saved/SavedArks/$(read_conf_value "$MAPS_DIR/$map/map.conf" "SaveDir" "$map")/" 2>/dev/null; press_enter ;;
+            3) ls -la "$MAPS_DIR/$map/backups/" 2>/dev/null; press_enter ;;
+            4) ls -la "$SERVER_DIR/" 2>/dev/null; press_enter ;;
+            5) log_info "Shell at: ${BLD}$MAPS_DIR/$map/${R}"; cd "$MAPS_DIR/$map" && exec bash ;;
             0|"") return ;;
-            *) log_err "Invalid choice." ;;
         esac
     done
 }
@@ -1451,27 +1502,18 @@ browse_files() {
 
 delete_map() {
     local map="$1"
-
-    if is_map_running "$map"; then
-        log_err "Stop the map first!"
-        return 1
-    fi
-
+    is_map_running "$map" && { log_err "Stop the map first!"; return 1; }
     echo ""
-    log_warn "This will ${RED}${BLD}permanently delete${R} map '${BLD}$map${R}' and all its configuration."
-    log_warn "Save data in server-files will ${BLD}NOT${R} be deleted."
-    echo ""
-    if confirm "Are you absolutely sure you want to delete '${BLD}$map${R}'?"; then
+    log_warn "${RED}${BLD}PERMANENTLY DELETE${R} map '${BLD}$map${R}' and all configuration?"
+    if confirm "Are you absolutely sure?"; then
         local service_name="ark-${map,,}.service"
         sudo systemctl stop "$service_name" 2>/dev/null || true
         sudo systemctl disable "$service_name" 2>/dev/null || true
         sudo rm -f "/etc/systemd/system/$service_name"
         sudo systemctl daemon-reload
-
         sed -i "/^${map}|/d" "$MAPS_CONF"
         rm -rf "$MAPS_DIR/$map"
-
-        log_ok "Map '${BLD}$map${R}${GRN}' deleted."
+        FEEDBACK="${GRN}${BLD}✔${R} Map '${BLD}$map${R}' deleted."
         return 0
     fi
     return 1
@@ -1483,50 +1525,66 @@ delete_map() {
 
 change_map_type() {
     local map="$1"
-
-    if is_map_running "$map"; then
-        log_err "Stop the map before changing the map type!"
-        return 1
-    fi
-
+    is_map_running "$map" && { log_err "Stop the map first!"; return 1; }
+    clear
     echo ""
     echo "  ${BLD}${MAG}═══ Change Map Type — ${CYN}$map${MAG} ═══${R}"
     thin_sep
-    local i=1
-    local map_keys=()
+    local i=1; local map_keys=()
     for key in $(echo "${!MAP_NAMES[@]}" | tr ' ' '\n' | sort); do
         printf "  ${CYN}%2d${R}) %-20s  ${DIM}(%s)${R}\n" "$i" "$key" "${MAP_NAMES[$key]}"
-        map_keys+=("$key")
-        ((i++))
+        map_keys+=("$key"); ((i++))
     done
-    echo ""
-    echo "  ${DIM} 0) Back${R}"
-    echo ""
-    echo -n "  ${WHT}Select new map: ${R}"
+    echo ""; echo "  ${DIM} 0) Back${R}"; echo ""
+    echo -n "  ${WHT}Select: ${R}"
     read -r choice
-
     [[ "$choice" == "0" || -z "$choice" ]] && return 0
-
     if (( choice > 0 && choice <= ${#map_keys[@]} )) 2>/dev/null; then
         local new_internal="${MAP_NAMES[${map_keys[$((choice-1))]}]}"
         write_conf_value "$MAPS_DIR/$map/map.conf" "MapName" "$new_internal"
-        log_ok "Map changed to ${BLD}${map_keys[$((choice-1))]}${R}${GRN} ($new_internal). Restart to apply."
-    else
-        log_err "Invalid selection."
+        log_ok "Changed to ${BLD}${map_keys[$((choice-1))]}${R}${GRN}. Restart to apply."
+        sleep 1
     fi
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
-#  OPTIMIZATION
+#  TOGGLE BATCH / AUTO-START
+#═══════════════════════════════════════════════════════════════════════════════
+
+toggle_batch() {
+    local map="$1"
+    local current; current=$(read_conf_value "$MAPS_DIR/$map/map.conf" "BatchEnabled" "true")
+    if [[ "$current" == "true" ]]; then
+        write_conf_value "$MAPS_DIR/$map/map.conf" "BatchEnabled" "false"
+        log_ok "${BLD}$map${R}${GRN} will be ${RED}skipped${R}${GRN} in Start All / Stop All."
+    else
+        write_conf_value "$MAPS_DIR/$map/map.conf" "BatchEnabled" "true"
+        log_ok "${BLD}$map${R}${GRN} will be ${GRN}included${R}${GRN} in Start All / Stop All."
+    fi
+    sleep 1
+}
+
+toggle_autostart() {
+    local map="$1"
+    local service="ark-${map,,}.service"
+    if systemctl is-enabled "$service" 2>/dev/null | grep -q "enabled"; then
+        sudo systemctl disable "$service" 2>/dev/null
+        log_ok "${BLD}$map${R}${GRN}: Auto-start ${RED}disabled${R}${GRN}. Won't start on boot/power recovery."
+    else
+        sudo systemctl enable "$service" 2>/dev/null
+        log_ok "${BLD}$map${R}${GRN}: Auto-start ${GRN}enabled${R}${GRN}. Will start on boot/power recovery."
+    fi
+    sleep 1
+}
+
+#═══════════════════════════════════════════════════════════════════════════════
+#  OPTIMIZATION / HEALTHCHECK / LOGROTATE
 #═══════════════════════════════════════════════════════════════════════════════
 
 apply_optimizations() {
     log_info "Applying system optimizations..."
-
     if command -v sysctl &>/dev/null; then
-        local sysctl_file="/etc/sysctl.d/99-ark-server.conf"
-        sudo tee "$sysctl_file" > /dev/null <<'SYSEOF'
-# ARK Server Optimizations
+        sudo tee "/etc/sysctl.d/99-ark-server.conf" > /dev/null <<'SYSEOF'
 vm.swappiness=10
 net.core.rmem_max=26214400
 net.core.wmem_max=26214400
@@ -1535,18 +1593,14 @@ net.core.wmem_default=1048576
 net.ipv4.udp_mem=65536 131072 262144
 SYSEOF
         sudo sysctl --system -q 2>/dev/null || true
-        log_ok "Kernel parameters optimized."
     fi
-
-    setup_logrotate
-    setup_healthcheck
+    setup_logrotate; setup_healthcheck
     log_ok "All optimizations applied."
 }
 
 setup_logrotate() {
-    local logrotate_conf="/etc/logrotate.d/ark-server"
-    if command -v logrotate &>/dev/null; then
-        sudo tee "$logrotate_conf" > /dev/null <<LREOF
+    command -v logrotate &>/dev/null || return
+    sudo tee "/etc/logrotate.d/ark-server" > /dev/null <<LREOF
 $MAPS_DIR/*/server.log
 $HOME/steam-*.log
 {
@@ -1560,41 +1614,32 @@ $HOME/steam-*.log
     size 50M
 }
 LREOF
-        log_ok "Logrotate configured."
-    fi
 }
 
 setup_healthcheck() {
     local hc_script="$SCRIPT_DIR/healthcheck.sh"
     cat > "$hc_script" <<'HCEOF'
 #!/usr/bin/env bash
-# ARK Server Healthcheck — run via cron every 5 minutes
 SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
 MAPS_DIR="$SCRIPT_DIR/maps"
 LOG="$SCRIPT_DIR/healthcheck.log"
-
 for map_dir in "$MAPS_DIR"/*/; do
     [[ -d "$map_dir" ]] || continue
     map=$(basename "$map_dir")
     conf="$map_dir/map.conf"
     [[ -f "$conf" ]] || continue
-
     service_name="ark-${map,,}.service"
     systemctl is-enabled "$service_name" &>/dev/null || continue
-
     if ! systemctl is-active "$service_name" &>/dev/null; then
-        echo "$(date '+%Y-%m-%d %H:%M:%S') [HEAL] $map is down, restarting..." >> "$LOG"
+        echo "$(date '+%Y-%m-%d %H:%M:%S') [HEAL] $map down, restarting..." >> "$LOG"
         systemctl restart "$service_name" 2>/dev/null || true
     fi
 done
 HCEOF
     chmod +x "$hc_script"
-
     local cron_line="*/5 * * * * $hc_script"
-    if ! crontab -l 2>/dev/null | grep -qF "$hc_script"; then
+    crontab -l 2>/dev/null | grep -qF "$hc_script" || \
         (crontab -l 2>/dev/null; echo "$cron_line") | crontab -
-        log_ok "Healthcheck cron installed (every 5 min)."
-    fi
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
@@ -1602,13 +1647,13 @@ HCEOF
 #═══════════════════════════════════════════════════════════════════════════════
 
 setup_scheduled_restart() {
+    clear
     echo ""
-    echo "  ${BLD}${MAG}═══ Scheduled Restart Setup ═══${R}"
+    echo "  ${BLD}${MAG}═══ Scheduled Restart ═══${R}"
     thin_sep
     echo -n "  ${WHT}Restart time (HH:MM, 24h) ${DIM}[04:00]${R}: "
     read -r restart_time
     restart_time="${restart_time:-04:00}"
-
     [[ "$restart_time" == "0" ]] && return 0
 
     local hour minute
@@ -1618,16 +1663,10 @@ setup_scheduled_restart() {
     local rs_script="$SCRIPT_DIR/scheduled-restart.sh"
     cat > "$rs_script" <<RSEOF
 #!/usr/bin/env bash
-# ARK Scheduled Restart with Player Warnings
 SCRIPT_DIR="\$(cd "\$(dirname "\$(realpath "\$0")")" && pwd)"
 MANAGER="\$SCRIPT_DIR/ark-manager.sh"
 LOG="\$SCRIPT_DIR/restart.log"
-
-announce() {
-    \$MANAGER broadcast "\$1" 2>/dev/null
-    echo "\$(date '+%Y-%m-%d %H:%M:%S') [RESTART] \$1" >> "\$LOG"
-}
-
+announce() { \$MANAGER broadcast "\$1" 2>/dev/null; echo "\$(date '+%Y-%m-%d %H:%M:%S') [RESTART] \$1" >> "\$LOG"; }
 announce "Server restart in 30 minutes!"
 sleep 1200
 announce "Server restart in 10 minutes!"
@@ -1636,110 +1675,108 @@ announce "Server restart in 3 minutes! Save your progress!"
 sleep 170
 announce "Server restart in 10 seconds!"
 sleep 10
-
-echo "\$(date '+%Y-%m-%d %H:%M:%S') [RESTART] Restarting all maps..." >> "\$LOG"
-\$MANAGER stop-all
-sleep 10
-\$MANAGER start-all
-echo "\$(date '+%Y-%m-%d %H:%M:%S') [RESTART] All maps restarted." >> "\$LOG"
+\$MANAGER stop-all; sleep 10; \$MANAGER start-all
+echo "\$(date '+%Y-%m-%d %H:%M:%S') [RESTART] Complete." >> "\$LOG"
 RSEOF
     chmod +x "$rs_script"
 
     local cron_min=$(( (minute - 30 + 60) % 60 ))
     local cron_hour=$hour
     (( minute < 30 )) && cron_hour=$(( (hour - 1 + 24) % 24 ))
-
-    local cron_line="$cron_min $cron_hour * * * $rs_script"
-    crontab -l 2>/dev/null | grep -vF "scheduled-restart.sh" | { cat; echo "$cron_line"; } | crontab -
-
-    log_ok "Scheduled restart set for ${BLD}$restart_time${R}${GRN} daily (warnings start 30 min before)."
+    crontab -l 2>/dev/null | grep -vF "scheduled-restart.sh" | { cat; echo "$cron_min $cron_hour * * * $rs_script"; } | crontab -
+    log_ok "Scheduled restart set for ${BLD}$restart_time${R}${GRN} daily."
+    sleep 1
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
-#  INTERACTIVE MENUS
+#  SELECT MAP HELPER
 #═══════════════════════════════════════════════════════════════════════════════
 
 select_map() {
-    local maps
-    maps=( $(get_maps) )
-    if (( ${#maps[@]} == 0 )); then
-        log_warn "No maps configured."
-        return 1
-    fi
+    local maps; maps=( $(get_maps) )
+    (( ${#maps[@]} == 0 )) && { FEEDBACK="${YEL}⚠ No maps configured.${R}"; return 1; }
+
+    clear
     echo ""
     echo "  ${BLD}${WHT}Select a map:${R}"
     thin_sep
     local i=1
     for m in "${maps[@]}"; do
-        local status_icon
-        if is_map_running "$m"; then
-            status_icon="${GRN}●${R}"
-        else
-            status_icon="${RED}●${R}"
-        fi
-        printf "  ${status_icon} ${CYN}%2d${R}) %s\n" "$i" "$m"
+        local icon
+        if is_map_running "$m"; then icon="${GRN}●${R}"; else icon="${RED}●${R}"; fi
+        printf "  ${icon} ${CYN}%2d${R}) %s\n" "$i" "$m"
         ((i++))
     done
-    echo ""
-    echo "  ${DIM} 0) Back${R}"
-    echo ""
+    echo ""; echo "  ${DIM} 0) Back${R}"; echo ""
     echo -n "  ${WHT}Choice: ${R}"
     read -r choice
-
     [[ "$choice" == "0" || -z "$choice" ]] && return 1
-
     if (( choice > 0 && choice <= ${#maps[@]} )) 2>/dev/null; then
         SELECTED_MAP="${maps[$((choice-1))]}"
         return 0
     fi
-    log_err "Invalid selection."
     return 1
 }
 
+#═══════════════════════════════════════════════════════════════════════════════
+#  MAP MENU (per-map management, clears screen each iteration)
+#═══════════════════════════════════════════════════════════════════════════════
+
 map_menu() {
     local map="$1"
+    local map_feedback=""
+
     while true; do
-        local internal health_raw status_text health_text
+        clear
+        local internal health_raw
         internal=$(read_conf_value "$MAPS_DIR/$map/map.conf" "MapName" "?")
         health_raw=$(check_map_health "$map")
 
+        echo ""
+        echo "  ${BLD}${BLU}╔═══════════════════════════════════════════════════════════╗${R}"
+        echo "  ${BLD}${BLU}║${R}  ${BLD}${WHT}$map${R}  ${DIM}($internal)${R}"
+        echo "  ${BLD}${BLU}╚═══════════════════════════════════════════════════════════╝${R}"
+
+        # Status line
+        local status_text health_text
         if is_map_running "$map"; then
             status_text="${BG_GRN}${BLD}${WHT} ONLINE ${R}"
-        else
-            status_text="${BG_RED}${BLD}${WHT} OFFLINE ${R}"
-        fi
-
-        case "$health_raw" in
-            HEALTHY)  health_text="${GRN}${BLD}HEALTHY${R}" ;;
-            DEGRADED) health_text="${YEL}${BLD}DEGRADED${R}" ;;
-            CRASHED)  health_text="${RED}${BLD}CRASHED${R}" ;;
-            ZOMBIE)   health_text="${RED}${BLD}ZOMBIE${R}" ;;
-            FROZEN)   health_text="${RED}${BLD}FROZEN${R}" ;;
-            STOPPED)  health_text="${DIM}STOPPED${R}" ;;
-            *)        health_text="${DIM}UNKNOWN${R}" ;;
-        esac
-
-        echo ""
-        echo "  ${BLD}${BLU}╔═══════════════════════════════════════════╗${R}"
-        echo "  ${BLD}${BLU}║${R}  ${BLD}${WHT}$map${R}  ${DIM}($internal)${R}"
-        echo "  ${BLD}${BLU}╚═══════════════════════════════════════════╝${R}"
-        echo "  Status: ${status_text}   Health: ${health_text}"
-
-        if is_map_running "$map"; then
-            local pc up mem
+            case "$health_raw" in
+                HEALTHY)  health_text="${GRN}${BLD}HEALTHY${R}" ;;
+                DEGRADED) health_text="${YEL}${BLD}DEGRADED${R}" ;;
+                *)        health_text="${RED}${BLD}$health_raw${R}" ;;
+            esac
+            local pc up mem cpu join_raw batch_st auto_st
             pc=$(get_player_count "$map" 2>/dev/null || echo "?")
-            up=$(get_map_uptime "$map")
-            mem=$(get_map_memory "$map")
-            echo "  Players: ${BLD}${pc}${R}  │  Uptime: ${BLD}${up}${R}  │  RAM: ${BLD}${mem}${R}"
+            up=$(get_map_uptime "$map"); mem=$(get_map_memory "$map"); cpu=$(get_map_cpu "$map")
+            join_raw=$(check_server_queryable "$map")
+            echo "  ${status_text}  ${health_text}  │  Players: ${BLD}${pc}${R}  │  Uptime: ${BLD}${up}${R}"
+            echo "  RAM: ${BLD}${mem}${R}  │  CPU: ${BLD}${cpu}${R}  │  Joinable: $(
+                [[ "$join_raw" == "YES" ]] && echo "${GRN}${BLD}✔ YES${R}" || echo "${RED}✖ NO${R}"
+            )"
+        else
+            echo "  ${BG_RED}${BLD}${WHT} OFFLINE ${R}  ${DIM}STOPPED${R}"
+        fi
+
+        # Batch / Auto-start status
+        local batch_s auto_s
+        is_batch_enabled "$map" && batch_s="${GRN}ON${R}" || batch_s="${RED}OFF${R}"
+        is_autostart_enabled "$map" 2>/dev/null && auto_s="${GRN}ON${R}" || auto_s="${RED}OFF${R}"
+        echo "  Batch: ${batch_s}  │  Auto-start: ${auto_s}"
+
+        # Show feedback
+        if [[ -n "$map_feedback" ]]; then
+            echo ""; echo "  $map_feedback"; map_feedback=""
         fi
         echo ""
 
-        echo "  ${CYN} 1${R}) ${GRN}Start${R}                ${CYN} 7${R}) Backup World"
-        echo "  ${CYN} 2${R}) ${RED}Stop${R}                 ${CYN} 8${R}) Restore Backup"
-        echo "  ${CYN} 3${R}) ${YEL}Restart${R}              ${CYN} 9${R}) View Logs"
-        echo "  ${CYN} 4${R}) RCON Console          ${CYN}10${R}) Browse Files"
-        echo "  ${CYN} 5${R}) Server Settings       ${CYN}11${R}) Change Map Type"
-        echo "  ${CYN} 6${R}) Mod Management        ${CYN}12${R}) ${RED}Delete Map${R}"
+        echo "  ${CYN} 1${R}) ${GRN}Start${R}              ${CYN} 8${R}) Restore Backup"
+        echo "  ${CYN} 2${R}) ${RED}Stop${R}               ${CYN} 9${R}) View Logs"
+        echo "  ${CYN} 3${R}) ${YEL}Restart${R}            ${CYN}10${R}) Browse Files"
+        echo "  ${CYN} 4${R}) RCON Console        ${CYN}11${R}) Change Map Type"
+        echo "  ${CYN} 5${R}) Server Settings     ${CYN}12${R}) Toggle Batch"
+        echo "  ${CYN} 6${R}) Mod Management      ${CYN}13${R}) Toggle Auto-Start"
+        echo "  ${CYN} 7${R}) Backup World        ${CYN}14${R}) ${RED}Delete Map${R}"
         echo ""
         echo "  ${DIM} 0) Back to Dashboard${R}"
         echo ""
@@ -1747,114 +1784,117 @@ map_menu() {
         read -r choice
 
         case "$choice" in
-            1)  start_map "$map"; press_enter ;;
-            2)  stop_map "$map"; press_enter ;;
-            3)  restart_map "$map"; press_enter ;;
+            1)  clear; start_map "$map"; press_enter ;;
+            2)  clear; stop_map "$map"; press_enter ;;
+            3)  clear; restart_map "$map"; press_enter ;;
             4)  rcon_console "$map" ;;
             5)  server_settings_menu "$map" ;;
             6)  manage_mods "$map" ;;
-            7)  backup_map "$map"; press_enter ;;
+            7)  clear; backup_map "$map"; press_enter ;;
             8)  restore_map "$map" ;;
             9)  view_logs "$map" ;;
             10) browse_files "$map" ;;
             11) change_map_type "$map" ;;
-            12) delete_map "$map" && return ;;
+            12) clear; toggle_batch "$map" ;;
+            13) clear; toggle_autostart "$map" ;;
+            14) clear; delete_map "$map" && return ;;
             0|"") return ;;
-            *) log_err "Invalid choice." ;;
+            *) ;;
         esac
     done
 }
+
+#═══════════════════════════════════════════════════════════════════════════════
+#  MAIN MENU (live dashboard + always-visible options, auto-refresh)
+#═══════════════════════════════════════════════════════════════════════════════
 
 main_menu() {
     while true; do
         show_dashboard
 
+        separator
+        echo ""
         echo "  ${BLD}${WHT}Actions:${R}"
         echo ""
-        echo "  ${CYN} 1${R}) ${BLU}Select Map${R}           ${CYN} 7${R}) Broadcast Message"
-        echo "  ${CYN} 2${R}) ${GRN}Add Map${R}              ${CYN} 8${R}) Scheduled Restarts"
-        echo "  ${CYN} 3${R}) ${GRN}Start All Maps${R}       ${CYN} 9${R}) Apply Optimizations"
-        echo "  ${CYN} 4${R}) ${RED}Stop All Maps${R}        ${CYN}10${R}) Global Defaults"
-        echo "  ${CYN} 5${R}) Install / Update      ${CYN}11${R}) ${BLU}Live Dashboard${R} ${DIM}(auto-refresh)${R}"
-        echo "  ${CYN} 6${R}) Send RCON Command"
+        echo "  ${CYN} 1${R}) ${BLU}Select Map${R}            ${CYN} 6${R}) Send RCON Command"
+        echo "  ${CYN} 2${R}) ${GRN}Add Map${R}               ${CYN} 7${R}) Broadcast Message"
+        echo "  ${CYN} 3${R}) ${GRN}Start All${R} ${DIM}(batch)${R}     ${CYN} 8${R}) Scheduled Restarts"
+        echo "  ${CYN} 4${R}) ${RED}Stop All${R} ${DIM}(batch)${R}      ${CYN} 9${R}) Global Defaults"
+        echo "  ${CYN} 5${R}) Install / Update"
         echo ""
         echo "  ${DIM} 0) Exit${R}"
         echo ""
-        echo -n "  ${WHT}Choice: ${R}"
-        read -r choice
+        echo -n "  ${GRY}↻ Auto-refresh 10s │${R} ${WHT}Choice: ${R}"
+
+        # Read with timeout — auto-refresh when no input
+        read -t 10 -r choice 2>/dev/null || true
+        [[ -z "$choice" ]] && continue
 
         case "$choice" in
             1)  select_map && map_menu "$SELECTED_MAP" ;;
-            2)  add_map; press_enter ;;
-            3)  start_all_maps; press_enter ;;
-            4)  stop_all_maps; press_enter ;;
-            5)  install_server; press_enter ;;
+            2)  add_map ;;
+            3)  clear; start_all_maps; press_enter ;;
+            4)  clear; stop_all_maps; press_enter ;;
+            5)  install_server ;;
             6)
                 if select_map; then
                     echo -n "  ${WHT}RCON command: ${R}"
                     read -r cmd
-                    [[ -n "$cmd" ]] && send_rcon "$SELECTED_MAP" "$cmd"
-                    press_enter
+                    [[ -n "$cmd" ]] && { clear; send_rcon "$SELECTED_MAP" "$cmd"; press_enter; }
                 fi
                 ;;
             7)
+                clear
+                echo ""
                 echo -n "  ${WHT}Message: ${R}"
                 read -r msg
                 [[ -n "$msg" ]] && broadcast_message "$msg"
-                press_enter
+                sleep 1
                 ;;
-            8)  setup_scheduled_restart; press_enter ;;
-            9)  apply_optimizations; press_enter ;;
-            10) ${EDITOR:-nano} "$DEFAULTS_CONF" ;;
-            11) live_dashboard ;;
-            0|"")
+            8)  setup_scheduled_restart ;;
+            9)  ${EDITOR:-nano} "$DEFAULTS_CONF" ;;
+            0)
                 echo ""
                 echo "  ${GRN}${BLD}Goodbye! 🦖${R}"
                 echo ""
                 exit 0
                 ;;
-            *) log_err "Invalid choice." ;;
+            *) ;;
         esac
     done
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
-#  CLI INTERFACE (non-interactive)
+#  CLI INTERFACE
 #═══════════════════════════════════════════════════════════════════════════════
 
 cli_status() {
-    local maps
-    maps=( $(get_maps) )
-    if (( ${#maps[@]} == 0 )); then
-        echo "No maps configured."
-        return
-    fi
-    printf "${BLD}%-16s %-10s %-10s %-8s %-8s %-8s${R}\n" "MAP" "STATUS" "HEALTH" "PLAYERS" "UPTIME" "RAM"
-    echo "────────────────────────────────────────────────────────────────"
+    local maps; maps=( $(get_maps) )
+    (( ${#maps[@]} == 0 )) && { echo "No maps configured."; return; }
+    printf "${BLD}%-16s %-10s %-10s %-9s %-8s %-8s %-6s %-6s${R}\n" "MAP" "STATUS" "HEALTH" "PLAYERS" "UPTIME" "RAM" "CPU" "JOIN"
+    echo "───────────────────────────────────────────────────────────────────────────"
     for map in "${maps[@]}"; do
-        local status health players uptime mem
-        if is_map_running "$map"; then status="${GRN}ONLINE${R}"; else status="${RED}OFFLINE${R}"; fi
+        local status health players uptime mem cpu join
+        is_map_running "$map" && status="${GRN}ONLINE${R}" || status="${RED}OFFLINE${R}"
         health=$(check_map_health "$map")
         case "$health" in
-            HEALTHY)  health="${GRN}${health}${R}" ;;
+            HEALTHY) health="${GRN}${health}${R}" ;;
             DEGRADED) health="${YEL}${health}${R}" ;;
             CRASHED|ZOMBIE|FROZEN) health="${RED}${health}${R}" ;;
-            *)        health="${DIM}${health}${R}" ;;
+            *) health="${DIM}${health}${R}" ;;
         esac
         if is_map_running "$map"; then
-            players=$(get_player_count "$map" 2>/dev/null || echo "?")
+            local pc max_p
+            pc=$(get_player_count "$map" 2>/dev/null || echo "?")
+            max_p=$(read_conf_value "$MAPS_DIR/$map/map.conf" "MaxPlayers" "70")
+            players="${pc}/${max_p}"
+            join=$(check_server_queryable "$map")
+            [[ "$join" == "YES" ]] && join="${GRN}✔ YES${R}" || join="${RED}✖ NO${R}"
         else
-            players="-"
+            players="-"; join="${DIM}-${R}"
         fi
-        uptime=$(get_map_uptime "$map")
-        mem=$(get_map_memory "$map")
-        # Use echo for colored output — printf %s can't handle ANSI widths correctly
-        local padmap padplayers paduptime padmem
-        padmap=$(printf '%-16s' "$map")
-        padplayers=$(printf '%-8s' "$players")
-        paduptime=$(printf '%-8s' "$uptime")
-        padmem=$(printf '%-8s' "$mem")
-        echo "${padmap} ${status}     ${health}   ${padplayers} ${paduptime} ${padmem}"
+        uptime=$(get_map_uptime "$map"); mem=$(get_map_memory "$map"); cpu=$(get_map_cpu "$map")
+        echo "$(pad 16 "$map") ${status}     ${health}   $(pad 9 "$players") $(pad 8 "$uptime") $(pad 8 "$mem") $(pad 6 "$cpu") ${join}"
     done
 }
 
@@ -1864,20 +1904,18 @@ show_help() {
     echo ""
     echo "  ${BLD}Usage:${R} $(basename "$0") ${CYN}[command]${R} ${DIM}[arguments]${R}"
     echo ""
-    echo "  ${BLD}Commands:${R}"
-    echo "    ${CYN}(none)${R}              Interactive dashboard"
-    echo "    ${CYN}install${R}             Install/update server files"
-    echo "    ${CYN}start${R} <map>         Start a map"
-    echo "    ${CYN}stop${R} <map>          Stop a map"
-    echo "    ${CYN}restart${R} <map>       Restart a map"
-    echo "    ${CYN}start-all${R}           Start all maps"
-    echo "    ${CYN}stop-all${R}            Stop all maps"
-    echo "    ${CYN}status${R}              Show all map statuses"
-    echo "    ${CYN}update${R}              Alias for install"
-    echo "    ${CYN}rcon${R} <map> \"cmd\"    Send RCON command"
-    echo "    ${CYN}backup${R} <map>        Backup map world"
-    echo "    ${CYN}broadcast${R} \"msg\"     Send message to all maps"
-    echo "    ${CYN}help${R}                Show this help"
+    echo "  ${CYN}(none)${R}              Interactive dashboard"
+    echo "  ${CYN}install${R}             Install/update server"
+    echo "  ${CYN}start${R} <map>         Start a map"
+    echo "  ${CYN}stop${R} <map>          Stop a map"
+    echo "  ${CYN}restart${R} <map>       Restart a map"
+    echo "  ${CYN}start-all${R}           Start all batch-enabled maps"
+    echo "  ${CYN}stop-all${R}            Stop all batch-enabled maps"
+    echo "  ${CYN}status${R}              Show all map statuses"
+    echo "  ${CYN}rcon${R} <map> \"cmd\"    Send RCON command"
+    echo "  ${CYN}backup${R} <map>        Backup map world"
+    echo "  ${CYN}broadcast${R} \"msg\"     Send message to all maps"
+    echo "  ${CYN}help${R}                Show this help"
     echo ""
 }
 
@@ -1904,7 +1942,6 @@ EOF
 [[ -f "$MAPS_CONF" ]] || touch "$MAPS_CONF"
 
 [[ -f "$OPT_CONF" ]] || cat > "$OPT_CONF" <<'EOF'
-# Optimization Configuration
 UseNullRHI=true
 ServerNiceLevel=-5
 EOF
@@ -1921,11 +1958,9 @@ else
         start-all)        start_all_maps ;;
         stop-all)         stop_all_maps ;;
         status)           cli_status ;;
-        rcon)
-            [[ -n "${2:-}" ]] && [[ -n "${3:-}" ]] && send_rcon "$2" "${*:3}" || { echo "Usage: $0 rcon <map> \"command\""; exit 1; }
-            ;;
+        rcon)             [[ -n "${2:-}" ]] && [[ -n "${3:-}" ]] && send_rcon "$2" "${*:3}" || { echo "Usage: $0 rcon <map> \"cmd\""; exit 1; } ;;
         backup)           [[ -n "${2:-}" ]] && backup_map "$2" || { echo "Usage: $0 backup <map>"; exit 1; } ;;
-        broadcast)        [[ -n "${2:-}" ]] && broadcast_message "${*:2}" || { echo "Usage: $0 broadcast \"message\""; exit 1; } ;;
+        broadcast)        [[ -n "${2:-}" ]] && broadcast_message "${*:2}" || { echo "Usage: $0 broadcast \"msg\""; exit 1; } ;;
         help|--help|-h)   show_help ;;
         *)                echo "Unknown command: $1"; show_help; exit 1 ;;
     esac
