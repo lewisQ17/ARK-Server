@@ -1,0 +1,20 @@
+# Server runtime files (not needed in repo)
+server-files/
+steamcmd/
+GE-Proton*/
+*.tar.gz
+*.log
+maps/*/backups/*.tar.gz
+maps/*/server.log
+healthcheck.log
+restart.log
+
+# Per-deployment configs (contain passwords — use templates/)
+maps/*/map.conf
+maps/*/mods.conf
+maps/*/GameUserSettings.ini
+maps/*/Game.ini
+
+# OS
+.DS_Store
+Thumbs.db

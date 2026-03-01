@@ -1,0 +1,19 @@
+# Map Configuration Template
+# Copy this to maps/<YourMap>/map.conf and edit the values
+#
+# Example: cp templates/map.conf.example maps/Extinction/map.conf
+
+MapName=Extinction_WP
+DisplayName=Extinction
+SaveDir=Extinction
+GamePort=7777
+QueryPort=27015
+RCONPort=27020
+MaxPlayers=70
+AdminPassword=CHANGE_ME
+ServerPassword=
+ModIDs=
+CustomStartParams=-NoBattlEye -crossplay -NoHangDetection
+ClusterID=
+GraphicsPreset=high
+BatchEnabled=true
