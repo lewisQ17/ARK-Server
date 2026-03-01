@@ -11,6 +11,7 @@ restart.log
 
 # Per-deployment configs (contain passwords — use templates/)
 maps/*/map.conf
+maps/*/mods.conf
 maps/*/GameUserSettings.ini
 maps/*/Game.ini
 

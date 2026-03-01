@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #═══════════════════════════════════════════════════════════════════════════════
-#  ARK: Survival Ascended — Linux Server Manager  v2.2
+#  ARK: Survival Ascended — Linux Server Manager  v2.3
 #  A clean, map-centered management tool for ASA dedicated servers.
 #  https://github.com/lewisQ17/ARK-Server
 #═══════════════════════════════════════════════════════════════════════════════
 set -u
 
-VERSION="2.2"
+VERSION="2.3"
 export LC_ALL=C.UTF-8 LANG=C.UTF-8
 
 #───────────────────────────── Paths ──────────────────────────────────────────
@@ -43,6 +43,7 @@ BG_GRN=$'\e[42m'
 BG_RED=$'\e[41m'
 BG_YEL=$'\e[43m'
 BG_BLU=$'\e[44m'
+CL=$'\e[K'
 
 #───────────────────────────── Known Maps ─────────────────────────────────────
 declare -A MAP_NAMES=(
@@ -63,6 +64,10 @@ declare -A MAP_NAMES=(
 # Global feedback variable — shown once on next dashboard refresh
 FEEDBACK=""
 
+# Restore terminal state on exit (cursor visibility, colors)
+cleanup_terminal() { printf '\e[?25h\e[0m' 2>/dev/null; stty echo 2>/dev/null || true; }
+trap cleanup_terminal EXIT
+
 #═══════════════════════════════════════════════════════════════════════════════
 #  UTILITY FUNCTIONS
 #═══════════════════════════════════════════════════════════════════════════════
@@ -72,8 +77,8 @@ log_ok()    { echo "${GRN}${BLD}  ✔ ${R} $*"; }
 log_warn()  { echo "${YEL}${BLD}  ⚠ ${R} $*"; }
 log_err()   { echo "${RED}${BLD}  ✖ ${R} $*"; }
 
-separator() { echo "  ${GRY}──────────────────────────────────────────────────────────────────────────────${R}"; }
-thin_sep()  { echo "  ${GRY}╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌${R}"; }
+separator() { echo "  ${GRY}──────────────────────────────────────────────────────────────────────────────${R}${CL}"; }
+thin_sep()  { echo "  ${GRY}╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌${R}${CL}"; }
 
 # Pad text to exact visible display width (handles multi-byte chars correctly)
 pad() {
@@ -371,6 +376,15 @@ get_map_cpu() {
     echo "${total:-0}%"
 }
 
+# Fast system CPU usage — delta from last sample (instant, no top -bn1)
+get_system_cpu() {
+    local cur prev
+    cur=$(awk '/^cpu /{printf "%d %d", $2+$3+$4, $2+$3+$4+$5+$6+$7+$8}' /proc/stat 2>/dev/null) || { echo "?"; return; }
+    prev=$(cat /tmp/.ark-sys-cpu 2>/dev/null) || prev="$cur"
+    echo "$cur" > /tmp/.ark-sys-cpu
+    echo "$prev $cur" | awk '{db=$3-$1; dt=$4-$2; if(dt>0) printf "%.0f", 100*db/dt; else print "0"}'
+}
+
 # Check if server is externally joinable (real network test, cached 15s)
 check_server_queryable() {
     local map="$1"
@@ -436,49 +450,47 @@ is_autostart_enabled() {
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
-#  DASHBOARD (live — refreshes every 2s, options always visible)
+#  DASHBOARD (live data only — prints with CL for flicker-free refresh)
 #═══════════════════════════════════════════════════════════════════════════════
 
 show_dashboard() {
-    clear
     local maps; maps=( $(get_maps) )
 
     # Header
-    echo ""
-    echo "  ${BLD}${BLU}╔══════════════════════════════════════════════════════════════════════════════╗${R}"
-    echo "  ${BLD}${BLU}║${R}  ${BLD}${WHT}  🦖  ARK: Survival Ascended — Server Manager${R}  ${DIM}v${VERSION}${R}                    ${BLD}${BLU}║${R}"
-    echo "  ${BLD}${BLU}╚══════════════════════════════════════════════════════════════════════════════╝${R}"
-    echo ""
+    echo "${CL}"
+    echo "  ${BLD}${BLU}╔══════════════════════════════════════════════════════════════════════════════╗${R}${CL}"
+    echo "  ${BLD}${BLU}║${R}  ${BLD}${WHT}  🦖  ARK: Survival Ascended — Server Manager${R}  ${DIM}v${VERSION}${R}                    ${BLD}${BLU}║${R}${CL}"
+    echo "  ${BLD}${BLU}╚══════════════════════════════════════════════════════════════════════════════╝${R}${CL}"
+    echo "${CL}"
 
-    # System info
-    local cpu_use mem_total mem_used disk_free host_uptime
-    cpu_use=$(top -bn1 2>/dev/null | grep "Cpu(s)" | awk '{print $2}' | cut -d. -f1 || echo "?")
+    # System info (fast: /proc/stat instead of top -bn1)
+    local cpu_use mem_total mem_used disk_free host_uptime server_ip
+    cpu_use=$(get_system_cpu)
     mem_total=$(free -g 2>/dev/null | awk '/Mem:/{print $2}' || echo "?")
     mem_used=$(free -g 2>/dev/null | awk '/Mem:/{print $3}' || echo "?")
     disk_free=$(df -h "$SCRIPT_DIR" 2>/dev/null | awk 'NR==2{print $4}' || echo "?")
     host_uptime=$(uptime -p 2>/dev/null | sed 's/up //' || echo "?")
+    server_ip=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "?")
 
-    echo "  ${GRY}┌─ System ─────────────────────────────────────────────────────────────────────┐${R}"
-    printf "  ${GRY}│${R}  CPU ${BLD}%s%%${R}  ${GRY}│${R}  RAM ${BLD}%sG${R}/%sG  ${GRY}│${R}  Disk ${BLD}%s${R} free  ${GRY}│${R}  Up ${BLD}%s${R}\n" \
-        "$cpu_use" "$mem_used" "$mem_total" "$disk_free" "$host_uptime"
-    echo "  ${GRY}└──────────────────────────────────────────────────────────────────────────────┘${R}"
-    echo ""
+    echo "  ${GRY}┌─ System ─────────────────────────────────────────────────────────────────────┐${R}${CL}"
+    printf "  ${GRY}│${R}  IP ${BLD}%s${R}  ${GRY}│${R}  CPU ${BLD}%s%%${R}  ${GRY}│${R}  RAM ${BLD}%sG${R}/%sG  ${GRY}│${R}  Disk ${BLD}%s${R}  ${GRY}│${R}  Up ${BLD}%s${R}${CL}\n" \
+        "$server_ip" "$cpu_use" "$mem_used" "$mem_total" "$disk_free" "$host_uptime"
+    echo "  ${GRY}└──────────────────────────────────────────────────────────────────────────────┘${R}${CL}"
+    echo "${CL}"
 
     if (( ${#maps[@]} == 0 )); then
-        echo "  ${DIM}No maps configured yet. Use ${WHT}Add Map${DIM} to get started.${R}"
+        echo "  ${DIM}No maps configured yet. Use ${WHT}Add Map${DIM} to get started.${R}${CL}"
     else
         # Table header — fixed column widths for perfect alignment
-        printf "  ${BLD}${WHT}%s %s %s %s %s %s %s %s %s${R}\n" \
+        printf "  ${BLD}${WHT}%s %s %s %s %s %s %s %s %s${R}${CL}\n" \
             "$(pad 14 "MAP")" "$(pad 10 "STATUS")" "$(pad 9 "HEALTH")" \
             "$(pad 8 "PLAYERS")" "$(pad 7 "UPTIME")" "$(pad 6 "RAM")" \
             "$(pad 5 "CPU")" "$(pad 4 "JOIN")" "$(pad 4 "AUTO")"
         separator
 
         for map in "${maps[@]}"; do
-            # MAP column
             local p_map; p_map="$(pad 14 "$map")"
 
-            # STATUS column
             local status_col
             if is_map_running "$map"; then
                 status_col="${GRN}${BLD}$(pad 10 "● ONLINE")${R}"
@@ -486,7 +498,6 @@ show_dashboard() {
                 status_col="${RED}$(pad 10 "● OFFLINE")${R}"
             fi
 
-            # HEALTH column
             local health_raw health_col
             health_raw=$(check_map_health "$map")
             case "$health_raw" in
@@ -496,7 +507,6 @@ show_dashboard() {
                 *)        health_col="${DIM}$(pad 9 "$health_raw")${R}" ;;
             esac
 
-            # PLAYERS column
             local p_players
             if is_map_running "$map"; then
                 local pc max_p
@@ -507,13 +517,11 @@ show_dashboard() {
                 p_players="${DIM}$(pad 8 "-")${R}"
             fi
 
-            # UPTIME, RAM, CPU columns
             local p_uptime p_ram p_cpu
             p_uptime="$(pad 7 "$(get_map_uptime "$map")")"
             p_ram="$(pad 6 "$(get_map_memory "$map")")"
             p_cpu="$(pad 5 "$(get_map_cpu "$map")")"
 
-            # JOIN column — ✔ or ✖
             local join_col
             if is_map_running "$map"; then
                 local join_raw
@@ -527,7 +535,6 @@ show_dashboard() {
                 join_col="${DIM}$(pad 4 "-")${R}"
             fi
 
-            # AUTO column — YES/NO
             local auto_col
             if is_autostart_enabled "$map" 2>/dev/null; then
                 auto_col="${GRN}$(pad 4 "YES")${R}"
@@ -535,17 +542,19 @@ show_dashboard() {
                 auto_col="${RED}$(pad 4 "NO")${R}"
             fi
 
-            # Print row
-            echo "  ${p_map} ${status_col} ${health_col} ${p_players} ${p_uptime} ${p_ram} ${p_cpu} ${join_col} ${auto_col}"
+            echo "  ${p_map} ${status_col} ${health_col} ${p_players} ${p_uptime} ${p_ram} ${p_cpu} ${join_col} ${auto_col}${CL}"
         done
     fi
-    echo ""
+    echo "${CL}"
 
-    # Show feedback if any
+    # Show feedback if any (always reserve 1 line for consistent layout)
     if [[ -n "$FEEDBACK" ]]; then
         thin_sep
-        echo "  $FEEDBACK"
+        echo "  $FEEDBACK${CL}"
         FEEDBACK=""
+    else
+        echo "${CL}"
+        echo "${CL}"
     fi
 }
 
@@ -972,7 +981,6 @@ open_firewall_ports() {
 #  MOD MANAGEMENT (mods.conf per map, with names + toggle)
 #═══════════════════════════════════════════════════════════════════════════════
 
-# Fetch mod name from Steam Workshop API
 fetch_mod_name() {
     local mod_id="$1"
     local name
@@ -983,7 +991,6 @@ fetch_mod_name() {
     echo "${name:-}"
 }
 
-# Initialize mods.conf from legacy ModIDs if needed
 init_mods_conf() {
     local map="$1"
     local mods_file="$MAPS_DIR/$map/mods.conf"
@@ -1005,7 +1012,6 @@ init_mods_conf() {
     fi
 }
 
-# Get comma-separated list of enabled mod IDs
 get_enabled_mod_ids() {
     local map="$1"
     local mods_file="$MAPS_DIR/$map/mods.conf"
@@ -1033,7 +1039,6 @@ manage_mods() {
         echo "  ${BLD}${MAG}═══ Mod Management — ${CYN}$map${MAG} ═══${R}"
         thin_sep
 
-        # Read and display mods
         local mod_ids=() mod_names=() mod_enabled=() mod_count=0
         while IFS='|' read -r id name enabled; do
             [[ "$id" =~ ^#.*$ || -z "$id" ]] && continue
@@ -1082,7 +1087,6 @@ manage_mods() {
                 for id in "${id_arr[@]}"; do
                     id=$(echo "$id" | tr -d ' ')
                     [[ -z "$id" ]] && continue
-                    # Check if already exists
                     if grep -q "^${id}|" "$mods_file" 2>/dev/null; then
                         log_warn "Mod $id already exists, skipping."
                         continue
@@ -1190,7 +1194,6 @@ start_map() {
     custom_params=$(read_conf_value "$conf" "CustomStartParams" "-NoBattlEye -crossplay -NoHangDetection")
     cluster_id=$(read_conf_value "$conf" "ClusterID" "")
 
-    # Get enabled mods
     local mod_ids; mod_ids=$(get_enabled_mod_ids "$map")
 
     if ss -lunp 2>/dev/null | grep -q ":${game_port} "; then
@@ -1543,27 +1546,44 @@ browse_files() {
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
-#  DELETE MAP
+#  DELETE MAP (double confirmation!)
 #═══════════════════════════════════════════════════════════════════════════════
 
 delete_map() {
     local map="$1"
     is_map_running "$map" && { log_err "Stop the map first!"; return 1; }
+
     echo ""
     log_warn "${RED}${BLD}PERMANENTLY DELETE${R} map '${BLD}$map${R}' and all configuration?"
-    if confirm "Are you absolutely sure?"; then
-        local service_name="ark-${map,,}.service"
-        sudo systemctl stop "$service_name" 2>/dev/null || true
-        sudo systemctl disable "$service_name" 2>/dev/null || true
-        sudo rm -f "/etc/systemd/system/$service_name"
-        sudo systemctl daemon-reload
-        sed -i "/^${map}|/d" "$MAPS_CONF"
-        rm -rf "$MAPS_DIR/$map"
-        rm -f "/tmp/.ark-players-${map}" "/tmp/.ark-join-${map}"
-        FEEDBACK="${GRN}${BLD}✔${R} Map '${BLD}$map${R}' deleted."
-        return 0
+    echo ""
+    if ! confirm "Are you sure you want to delete '$map'?"; then
+        log_info "Cancelled."
+        sleep 1
+        return 1
     fi
-    return 1
+
+    echo ""
+    log_warn "${RED}${BLD}LAST CHANCE!${R} This will ${RED}permanently${R} remove:"
+    echo "    - Map config, mods, backups"
+    echo "    - Systemd service"
+    echo "    - All data for '${BLD}$map${R}'"
+    echo ""
+    if ! confirm "Type 'y' to PERMANENTLY delete '$map'"; then
+        log_info "Cancelled."
+        sleep 1
+        return 1
+    fi
+
+    local service_name="ark-${map,,}.service"
+    sudo systemctl stop "$service_name" 2>/dev/null || true
+    sudo systemctl disable "$service_name" 2>/dev/null || true
+    sudo rm -f "/etc/systemd/system/$service_name"
+    sudo systemctl daemon-reload
+    sed -i "/^${map}|/d" "$MAPS_CONF"
+    rm -rf "$MAPS_DIR/$map"
+    rm -f "/tmp/.ark-players-${map}" "/tmp/.ark-join-${map}"
+    FEEDBACK="${GRN}${BLD}✔${R} Map '${BLD}$map${R}' deleted."
+    return 0
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
@@ -1764,27 +1784,34 @@ select_map() {
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
-#  MAP MENU (per-map management — live status refreshes every 2s)
+#  MAP MENU — live status (2s), static options, input preserved
 #═══════════════════════════════════════════════════════════════════════════════
 
 map_menu() {
     local map="$1"
-    local map_feedback=""
+    local map_feedback="" pending="" need_clear=true
 
     while true; do
         # Guard: if map was deleted, exit this menu
         [[ ! -d "$MAPS_DIR/$map" ]] && return
 
-        clear
+        # Screen management: clear once, then cursor-home for flicker-free refresh
+        if $need_clear; then
+            clear
+            need_clear=false
+        else
+            printf '\e[?25l\e[H'
+        fi
+
         local internal
         internal=$(read_conf_value "$MAPS_DIR/$map/map.conf" "MapName" "?")
 
-        echo ""
-        echo "  ${BLD}${BLU}╔═══════════════════════════════════════════════════════════╗${R}"
-        echo "  ${BLD}${BLU}║${R}  ${BLD}${WHT}$map${R}  ${DIM}($internal)${R}"
-        echo "  ${BLD}${BLU}╚═══════════════════════════════════════════════════════════╝${R}"
+        echo "${CL}"
+        echo "  ${BLD}${BLU}╔═══════════════════════════════════════════════════════════╗${R}${CL}"
+        echo "  ${BLD}${BLU}║${R}  ${BLD}${WHT}$map${R}  ${DIM}($internal)${R}${CL}"
+        echo "  ${BLD}${BLU}╚═══════════════════════════════════════════════════════════╝${R}${CL}"
 
-        # Live status block
+        # === LIVE STATUS BLOCK (refreshes every 2s) ===
         if is_map_running "$map"; then
             local health_raw
             health_raw=$(check_map_health "$map")
@@ -1805,119 +1832,174 @@ map_menu() {
             local join_text
             [[ "$join_raw" == "YES" ]] && join_text="${GRN}${BLD}✔ YES${R}" || join_text="${RED}${BLD}✖ NO${R}"
 
-            echo "  ${status_text}  ${health_text}  │  Players: ${BLD}${pc}/${max_p}${R}  │  Uptime: ${BLD}${up}${R}"
-            echo "  RAM: ${BLD}${mem}${R}  │  CPU: ${BLD}${cpu}${R}  │  Join: ${join_text}"
+            echo "  ${status_text}  ${health_text}  │  Players: ${BLD}${pc}/${max_p}${R}  │  Uptime: ${BLD}${up}${R}${CL}"
+            echo "  RAM: ${BLD}${mem}${R}  │  CPU: ${BLD}${cpu}${R}  │  Join: ${join_text}${CL}"
         else
-            echo "  ${BG_RED}${BLD}${WHT} OFFLINE ${R}  ${DIM}STOPPED${R}"
+            echo "  ${BG_RED}${BLD}${WHT} OFFLINE ${R}  ${DIM}STOPPED${R}${CL}"
+            echo "${CL}"
         fi
 
         # Groep / Auto-start status
         local groep_s auto_s
         is_batch_enabled "$map" && groep_s="${GRN}AAN${R}" || groep_s="${RED}UIT${R}"
         is_autostart_enabled "$map" 2>/dev/null && auto_s="${GRN}AAN${R}" || auto_s="${RED}UIT${R}"
-        echo "  Groep: ${groep_s}  │  Auto-start: ${auto_s}"
+        echo "  Groep: ${groep_s}  │  Auto-start: ${auto_s}${CL}"
 
-        # Show feedback if any
+        # Feedback area (always 1 line for consistent layout)
         if [[ -n "$map_feedback" ]]; then
-            echo ""
-            echo "  $map_feedback"
+            echo "  $map_feedback${CL}"
             map_feedback=""
+        else
+            echo "${CL}"
         fi
-        echo ""
+        echo "${CL}"
 
-        # Menu options — aligned columns with printf %2d for consistent numbering
-        printf "  ${CYN}%2d${R}) ${GRN}%-20s${R}${CYN}%2d${R}) %s\n" 1 "Start" 8 "Restore Backup"
-        printf "  ${CYN}%2d${R}) ${RED}%-20s${R}${CYN}%2d${R}) %s\n" 2 "Stop" 9 "View Logs"
-        printf "  ${CYN}%2d${R}) ${YEL}%-20s${R}${CYN}%2d${R}) %s\n" 3 "Restart" 10 "Browse Files"
-        printf "  ${CYN}%2d${R}) %-20s  ${CYN}%2d${R}) %s\n" 4 "RCON Console" 11 "Change Map Type"
-        printf "  ${CYN}%2d${R}) %-20s  ${CYN}%2d${R}) %s\n" 5 "Server Settings" 12 "Toggle Groep"
-        printf "  ${CYN}%2d${R}) %-20s  ${CYN}%2d${R}) %s\n" 6 "Mod Management" 13 "Toggle Auto-Start"
-        printf "  ${CYN}%2d${R}) %-20s  ${CYN}%2d${R}) ${RED}%s${R}\n" 7 "Backup World" 14 "Delete Map"
-        echo ""
-        echo "  ${DIM} 0) Back to Dashboard${R}"
-        echo ""
-        echo -n "  ${GRY}↻ Live 2s │${R} ${WHT}Choice: ${R}"
+        # === STATIC MENU OPTIONS (reprinted but identical = no visible change) ===
+        printf "  ${CYN}%2d${R}) ${GRN}%-20s${R}  ${CYN}%2d${R}) %s${CL}\n" 1 "Start" 8 "Restore Backup"
+        printf "  ${CYN}%2d${R}) ${RED}%-20s${R}  ${CYN}%2d${R}) %s${CL}\n" 2 "Stop" 9 "View Logs"
+        printf "  ${CYN}%2d${R}) ${YEL}%-20s${R}  ${CYN}%2d${R}) %s${CL}\n" 3 "Restart" 10 "Browse Files"
+        printf "  ${CYN}%2d${R}) %-20s  ${CYN}%2d${R}) %s${CL}\n" 4 "RCON Console" 11 "Change Map Type"
+        printf "  ${CYN}%2d${R}) %-20s  ${CYN}%2d${R}) %s${CL}\n" 5 "Server Settings" 12 "Toggle Groep"
+        printf "  ${CYN}%2d${R}) %-20s  ${CYN}%2d${R}) %s${CL}\n" 6 "Mod Management" 13 "Toggle Auto-Start"
+        printf "  ${CYN}%2d${R}) %-20s  ${CYN}%2d${R}) ${RED}%s${R}${CL}\n" 7 "Backup World" 14 "Delete Map"
+        echo "${CL}"
+        echo "  ${DIM} 0) Back to Dashboard${R}${CL}"
+        echo "${CL}"
 
-        # Auto-refresh every 2 seconds
-        read -t 2 -r choice 2>/dev/null || true
-        [[ -z "$choice" ]] && continue
+        # Clear old content below + show cursor
+        printf '\e[J\e[?25h'
 
-        case "$choice" in
-            1)  clear; start_map "$map"; press_enter ;;
-            2)  clear; stop_map "$map"; press_enter ;;
-            3)  clear; restart_map "$map"; press_enter ;;
-            4)  rcon_console "$map" ;;
-            5)  server_settings_menu "$map" ;;
-            6)  manage_mods "$map" ;;
-            7)  clear; backup_map "$map"; press_enter ;;
-            8)  restore_map "$map" ;;
-            9)  view_logs "$map" ;;
-            10) browse_files "$map" ;;
-            11) change_map_type "$map" ;;
-            12) map_feedback=$(toggle_batch "$map") ;;
-            13) map_feedback=$(toggle_autostart "$map") ;;
-            14) clear; delete_map "$map" && return ;;
-            0|"") return ;;
-            *) ;;
-        esac
+        # === PROMPT with preserved input ===
+        if [[ -n "$pending" ]]; then
+            printf "  ${GRY}↻ %s │${R} ${WHT}Keuze ${DIM}(Enter=ok, c=wis)${R}: ${BLD}%s${R}" "$(date +%H:%M:%S)" "$pending"
+        else
+            printf "  ${GRY}↻ %s │${R} ${WHT}Keuze: ${R}" "$(date +%H:%M:%S)"
+        fi
+
+        # Read input with 2s timeout — preserves partial input on timeout
+        local input=""
+        if read -t 2 -r input; then
+            # Enter pressed — combine pending + new input
+            if [[ ("$input" == "c" || "$input" == "C") && -n "$pending" ]]; then
+                pending=""; continue
+            fi
+            local choice="${pending}${input}"
+            pending=""
+            [[ -z "$choice" ]] && continue
+
+            case "$choice" in
+                1)  need_clear=true; clear; start_map "$map"; press_enter ;;
+                2)  need_clear=true; clear; stop_map "$map"; press_enter ;;
+                3)  need_clear=true; clear; restart_map "$map"; press_enter ;;
+                4)  need_clear=true; rcon_console "$map" ;;
+                5)  need_clear=true; server_settings_menu "$map" ;;
+                6)  need_clear=true; manage_mods "$map" ;;
+                7)  need_clear=true; clear; backup_map "$map"; press_enter ;;
+                8)  need_clear=true; restore_map "$map" ;;
+                9)  need_clear=true; view_logs "$map" ;;
+                10) need_clear=true; browse_files "$map" ;;
+                11) need_clear=true; change_map_type "$map" ;;
+                12) map_feedback=$(toggle_batch "$map") ;;
+                13) map_feedback=$(toggle_autostart "$map") ;;
+                14) need_clear=true; clear; delete_map "$map" && return ;;
+                0)  return ;;
+                *)  map_feedback="${RED}${BLD}✖${R} Ongeldige keuze: '${choice}'" ;;
+            esac
+        else
+            # Timeout — preserve any partially typed input
+            pending="${pending}${input}"
+        fi
     done
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
-#  MAIN MENU (live dashboard — refreshes every 2s, options always visible)
+#  MAIN MENU — live dashboard (2s), static options, input preserved
 #═══════════════════════════════════════════════════════════════════════════════
 
 main_menu() {
+    local pending="" need_clear=true
+
     while true; do
+        # Screen management: clear once, then cursor-home for flicker-free refresh
+        if $need_clear; then
+            clear
+            need_clear=false
+        else
+            printf '\e[?25l\e[H'
+        fi
+
+        # === LIVE DASHBOARD DATA (refreshes every 2s) ===
         show_dashboard
 
+        # === STATIC MENU OPTIONS (reprinted but identical = no visible change) ===
         separator
-        echo ""
-        echo "  ${BLD}${WHT}Actions:${R}"
-        echo ""
-        printf "  ${CYN}%2d${R}) ${BLU}%-22s${R}${CYN}%2d${R}) %s\n" 1 "Select Map" 5 "Send RCON Command"
-        printf "  ${CYN}%2d${R}) ${GRN}%-22s${R}${CYN}%2d${R}) %s\n" 2 "Add Map" 6 "Broadcast Message"
-        printf "  ${CYN}%2d${R}) ${GRN}%-14s${R}${DIM}(groep)${R}  ${CYN}%2d${R}) %s\n" 3 "Start All" 7 "Scheduled Restarts"
-        printf "  ${CYN}%2d${R}) ${RED}%-14s${R}${DIM}(groep)${R}  ${CYN}%2d${R}) %s\n" 4 "Stop All" 8 "Install / Update"
-        echo ""
-        echo "  ${DIM} 0) Exit${R}"
-        echo ""
-        echo -n "  ${GRY}↻ Live 2s │${R} ${WHT}Choice: ${R}"
+        echo "${CL}"
+        echo "  ${BLD}${WHT}Actions:${R}${CL}"
+        echo "${CL}"
+        printf "  ${CYN}%2d${R}) ${BLU}%-22s${R}${CYN}%2d${R}) %s${CL}\n" 1 "Select Map" 5 "Send RCON Command"
+        printf "  ${CYN}%2d${R}) ${GRN}%-22s${R}${CYN}%2d${R}) %s${CL}\n" 2 "Add Map" 6 "Broadcast Message"
+        printf "  ${CYN}%2d${R}) ${GRN}%-14s${R}${DIM}(groep)${R}  ${CYN}%2d${R}) %s${CL}\n" 3 "Start All" 7 "Scheduled Restarts"
+        printf "  ${CYN}%2d${R}) ${RED}%-14s${R}${DIM}(groep)${R}  ${CYN}%2d${R}) %s${CL}\n" 4 "Stop All" 8 "Install / Update"
+        echo "${CL}"
+        echo "  ${DIM} 0) Exit${R}${CL}"
+        echo "${CL}"
 
-        # Auto-refresh every 2 seconds
-        read -t 2 -r choice 2>/dev/null || true
-        [[ -z "$choice" ]] && continue
+        # Clear old content below + show cursor
+        printf '\e[J\e[?25h'
 
-        case "$choice" in
-            1)  select_map && map_menu "$SELECTED_MAP" ;;
-            2)  add_map ;;
-            3)  clear; start_all_maps; press_enter ;;
-            4)  clear; stop_all_maps; press_enter ;;
-            5)
-                if select_map; then
-                    echo -n "  ${WHT}RCON command: ${R}"
-                    read -r cmd
-                    [[ -n "$cmd" ]] && { clear; send_rcon "$SELECTED_MAP" "$cmd"; press_enter; }
-                fi
-                ;;
-            6)
-                clear
-                echo ""
-                echo -n "  ${WHT}Message: ${R}"
-                read -r msg
-                [[ -n "$msg" ]] && broadcast_message "$msg"
-                sleep 1
-                ;;
-            7)  setup_scheduled_restart ;;
-            8)  install_server ;;
-            0)
-                echo ""
-                echo "  ${GRN}${BLD}Goodbye! 🦖${R}"
-                echo ""
-                exit 0
-                ;;
-            *) ;;
-        esac
+        # === PROMPT with preserved input ===
+        if [[ -n "$pending" ]]; then
+            printf "  ${GRY}↻ %s │${R} ${WHT}Keuze ${DIM}(Enter=ok, c=wis)${R}: ${BLD}%s${R}" "$(date +%H:%M:%S)" "$pending"
+        else
+            printf "  ${GRY}↻ %s │${R} ${WHT}Keuze: ${R}" "$(date +%H:%M:%S)"
+        fi
+
+        # Read input with 2s timeout — preserves partial input on timeout
+        local input=""
+        if read -t 2 -r input; then
+            # Enter pressed — combine pending + new input
+            if [[ ("$input" == "c" || "$input" == "C") && -n "$pending" ]]; then
+                pending=""; continue
+            fi
+            local choice="${pending}${input}"
+            pending=""
+            [[ -z "$choice" ]] && continue
+
+            need_clear=true
+            case "$choice" in
+                1)  select_map && map_menu "$SELECTED_MAP" ;;
+                2)  add_map ;;
+                3)  clear; start_all_maps; press_enter ;;
+                4)  clear; stop_all_maps; press_enter ;;
+                5)
+                    if select_map; then
+                        echo -n "  ${WHT}RCON command: ${R}"
+                        read -r cmd
+                        [[ -n "$cmd" ]] && { clear; send_rcon "$SELECTED_MAP" "$cmd"; press_enter; }
+                    fi
+                    ;;
+                6)
+                    clear
+                    echo ""
+                    echo -n "  ${WHT}Message: ${R}"
+                    read -r msg
+                    [[ -n "$msg" ]] && broadcast_message "$msg"
+                    sleep 1
+                    ;;
+                7)  setup_scheduled_restart ;;
+                8)  install_server ;;
+                0)
+                    echo ""
+                    echo "  ${GRN}${BLD}Goodbye! 🦖${R}"
+                    echo ""
+                    exit 0
+                    ;;
+                *)  FEEDBACK="${RED}${BLD}✖${R} Ongeldige keuze: '${choice}'" ;;
+            esac
+        else
+            # Timeout — preserve any partially typed input
+            pending="${pending}${input}"
+        fi
     done
 }
 

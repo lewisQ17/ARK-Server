@@ -16,3 +16,4 @@ ModIDs=
 CustomStartParams=-NoBattlEye -crossplay -NoHangDetection
 ClusterID=
 GraphicsPreset=high
+BatchEnabled=true
