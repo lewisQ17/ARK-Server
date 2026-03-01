@@ -39,8 +39,6 @@ A clean, powerful, map-centered server manager for running ARK: Survival Ascende
 
 ### Security
 
-- **Passwords never in git** — All per-map configs are gitignored
-- **Template configs** — Use `templates/map.conf.example` as starting point
 - **Delete Protection** — Double confirmation required to delete a map
 
 ## Quick Start
