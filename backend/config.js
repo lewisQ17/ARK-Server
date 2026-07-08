@@ -15,7 +15,8 @@ const config = {
     vmid: parseInt(env.PVE_VMID || '100', 10),
     user: env.PVE_USER || 'root@pam',
     password: env.PVE_PASSWORD || '',
-    tlsFingerprint: env.PVE_TLS_FINGERPRINT || '',   // SHA-256 cert pin; empty = insecure fallback (warns)
+    tlsFingerprint: env.PVE_TLS_FINGERPRINT || '',   // SHA-256 cert pin (required unless tlsInsecure)
+    tlsInsecure: env.PVE_TLS_INSECURE === '1',       // explicit opt-in to unverified TLS
   },
 
   // ARK manager on the VM.
@@ -24,6 +25,7 @@ const config = {
     manager: env.ARK_MANAGER || '/home/arkadmin/ark-manager/ark-manager.sh',
     servicePrefix: 'ark-',           // systemd unit = ark-<mapname,lowercase>
     ramAllocGB: parseInt(env.ARK_RAM_ALLOC || '16', 10),
+    coresTotal: parseInt(env.PVE_VM_CORES || '4', 10),   // the ARK VM vCPU count — ceiling for per-world CPU caps (falls back if Proxmox status omits it)
     rconPasswordOverride: env.ARK_RCON_PASSWORD || '',
   },
 
@@ -44,6 +46,8 @@ const config = {
     site: env.UNIFI_SITE || 'default',
     arkVmIp: env.ARK_VM_IP || '10.0.0.50',
     proto: env.UNIFI_FORWARD_PROTO || 'udp',
+    tlsFingerprint: env.UNIFI_TLS_FINGERPRINT || '',   // SHA-256 cert pin (required when enabled, unless tlsInsecure)
+    tlsInsecure: env.UNIFI_TLS_INSECURE === '1',
   },
 
   pollIntervalMs: parseInt(env.POLL_INTERVAL_MS || '6000', 10),

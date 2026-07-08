@@ -10,33 +10,10 @@
 // Auth: root@pam ticket (cached ~110 min, re-auth on 401). A privilege-separated
 // API token has no VM perms here, so ticket auth is used. See README security note.
 
-const { Agent } = require('undici');
-const tls = require('tls');
-
-// Proxmox uses a self-signed cert in this homelab. Rather than disabling TLS
-// verification (which lets any LAN MITM capture the root@pam ticket), pin the
-// PVE cert's SHA-256 fingerprint via PVE_TLS_FINGERPRINT. If none is configured
-// we fall back to the old insecure behaviour but warn loudly.
-function buildAgent(fingerprint) {
-  const want = String(fingerprint || '').replace(/:/g, '').toLowerCase();
-  if (!want) {
-    console.warn('[proxmox] PVE_TLS_FINGERPRINT not set — TLS peer verification disabled (root@pam exposed to LAN MITM). Pin the cert to fix.');
-    return new Agent({ connect: { rejectUnauthorized: false } });
-  }
-  return new Agent({
-    connect(opts, callback) {
-      const socket = tls.connect(
-        { ...opts, host: opts.hostname, servername: opts.servername || opts.hostname, ALPNProtocols: ['http/1.1'], rejectUnauthorized: false },
-        () => {
-          const got = (socket.getPeerCertificate().fingerprint256 || '').replace(/:/g, '').toLowerCase();
-          if (got !== want) { socket.destroy(); callback(new Error(`PVE TLS fingerprint mismatch (got ${got || 'none'})`)); return; }
-          callback(null, socket);
-        },
-      );
-      socket.once('error', callback);
-    },
-  });
-}
+// Proxmox uses a self-signed cert; pin it by SHA-256 fingerprint (PVE_TLS_FINGERPRINT)
+// so the root@pam ticket is never sent to an unverified peer. Fails closed unless
+// PVE_TLS_INSECURE=1 is set. See pinned-agent.js.
+const { buildPinnedAgent } = require('./pinned-agent');
 
 class Proxmox {
   constructor(cfg) {
@@ -48,7 +25,7 @@ class Proxmox {
     this._ticket = null;
     this._ticketAt = 0;
     this._csrf = null;
-    this._agent = buildAgent(cfg.tlsFingerprint);
+    this._agent = buildPinnedAgent({ label: 'proxmox', fingerprint: cfg.tlsFingerprint, allowInsecure: cfg.tlsInsecure });
   }
 
   async _fetch(path, opts = {}) {
