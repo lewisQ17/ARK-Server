@@ -612,7 +612,9 @@ async function createMap(pmx, arkCfg, opts) {
   const u = arkCfg.user;
   const md = `${dir}/maps/${display}`;
   const sess = asciiSafe((sessionName || display).replace(/[\r\n"]/g, ''));
-  const apw = asciiSafe(adminPassword), spw = asciiSafe(serverPassword);
+  // strip CR/LF: these land in the line-based map.conf/GUS; a newline would inject
+  // extra KEY=VALUE lines that ark-manager.sh reads + feeds into the launch (delayed RCE)
+  const apw = asciiSafe(adminPassword).replace(/[\r\n]/g, ''), spw = asciiSafe(serverPassword).replace(/[\r\n]/g, '');
 
   // exists check
   const chk = await pmx.guestShell(`[ -d ${shq(md)} ] && echo EXISTS || echo OK`, { asUser: u });
@@ -681,6 +683,15 @@ async function deleteMap(pmx, arkCfg, display) {
   const r = await pmx.guestShell(
     `systemctl stop ${svc} 2>/dev/null; systemctl disable ${svc} 2>/dev/null; ` +
     `rm -f /etc/systemd/system/${svc}; systemctl daemon-reload; ` +
+    // Close this map's firewall ports before removing its config (read ports from map.conf while
+    // it still exists), so deleting a world leaves no orphan ufw rules.
+    `MCF=${shq(md)}/map.conf; if [ -f "$MCF" ]; then ` +
+    `GP=$(grep -E '^GamePort=' "$MCF" | tail -1 | cut -d= -f2); ` +
+    `QP=$(grep -E '^QueryPort=' "$MCF" | tail -1 | cut -d= -f2); ` +
+    `RP=$(grep -E '^RCONPort=' "$MCF" | tail -1 | cut -d= -f2); ` +
+    `[ -n "$GP" ] && ufw --force delete allow "$GP"/udp 2>/dev/null; ` +
+    `[ -n "$QP" ] && ufw --force delete allow "$QP"/udp 2>/dev/null; ` +
+    `[ -n "$RP" ] && ufw --force delete allow "$RP"/tcp 2>/dev/null; fi; ` +
     `runuser -u ${arkCfg.user} -- rm -rf ${shq(md)}; ` +
     `MC=${shq(dir)}/config/maps.conf; [ -f "$MC" ] && grep -v "^${display}|" "$MC" > "$MC.tmp" && mv "$MC.tmp" "$MC"; ` +
     `echo DELETED`,
