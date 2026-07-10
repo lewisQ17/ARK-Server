@@ -640,7 +640,21 @@ class Component extends DCLogic {
       diffFill:(function(){ const d=(((s.cfgOverride||{}).OverrideOfficialDifficulty)!=null?parseFloat(s.cfgOverride.OverrideOfficialDifficulty):(((selectedInst.config||{}).rules||{}).difficulty||1)); const pct=Math.min(100,Math.round(d/10*100)); return {position:'absolute',left:'0',top:'0',bottom:'0',width:pct+'%',borderRadius:'99px',background:'var(--cyan)'}; })(),
       diffKnob:(function(){ const d=(((s.cfgOverride||{}).OverrideOfficialDifficulty)!=null?parseFloat(s.cfgOverride.OverrideOfficialDifficulty):(((selectedInst.config||{}).rules||{}).difficulty||1)); const pct=Math.min(100,Math.round(d/10*100)); return {position:'absolute',top:'50%',left:pct+'%',transform:'translate(-50%,-50%)',width:'14px',height:'14px',borderRadius:'99px',background:'#fff',border:'2px solid var(--cyan)'}; })(),
       ruleTameLimit: (selectedInst.config&&selectedInst.config.rules)?('cap '+selectedInst.config.rules.tameLimit):'—',
-      dayTime: (selectedInst.config&&selectedInst.config.sessionName)?selectedInst.config.sessionName:(selectedInst.map||'ASA')
+      dayTime: (selectedInst.config&&selectedInst.config.sessionName)?selectedInst.config.sessionName:(selectedInst.map||'ASA'),
+      // header telemetry strip — live stats that fill the header width with real data
+      telemetry: (function(inst){
+        const cap = inst.ramLimitGB!=null?inst.ramLimitGB:(inst.ramAlloc||16);
+        const ramUse = inst.ramLiveGB!=null?inst.ramLiveGB:(inst.ramUsed!=null?inst.ramUsed:0);
+        const kS={fontSize:'9.5px',textTransform:'uppercase',letterSpacing:'.08em',color:'var(--mute)',fontWeight:600};
+        const vS=(c)=>({fontSize:'15px',fontWeight:700,fontFamily:'JetBrains Mono,monospace',color:c,lineHeight:'1.1'});
+        const subS={fontSize:'11px',color:'var(--mute)',fontFamily:'JetBrains Mono,monospace'};
+        return [
+          {k:'Players', v:String(inst.players||0), sub:' / '+(inst.max||70), kStyle:kS, vStyle:vS('var(--text)'), subStyle:subS},
+          {k:'CPU', v: idle?'—':(inst.cpuStr||'—'), sub:'', kStyle:kS, vStyle:vS('var(--cyan)'), subStyle:subS},
+          {k:'RAM', v: idle?'—':String(ramUse), sub: idle?'':(' / '+cap+'G'), kStyle:kS, vStyle:vS('var(--ember)'), subStyle:subS},
+          {k:'Uptime', v: (inst.uptime||'—'), sub:'', kStyle:kS, vStyle:vS('var(--text)'), subStyle:subS}
+        ];
+      })(selectedInst)
     });
 
     // console
