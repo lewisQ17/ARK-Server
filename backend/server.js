@@ -384,6 +384,19 @@ app.post('/api/maps', async (req, res) => {
         } catch (e) { r.forward = { ok: false, error: e.message }; console.error('[unifi create]', e.message); }
       }
       await syncMaps();
+      // Optional CPU/RAM cap at creation time — the world isn't started yet, so this is
+      // just a persisted systemd drop-in; the OOM guard in setResources() is a no-op here.
+      const reqCores = Number(o.cores), reqRam = Number(o.ramGB);
+      if ((Number.isFinite(reqCores) && reqCores > 0) || (Number.isFinite(reqRam) && reqRam > 0)) {
+        const newArk = arks[String(o.display).toLowerCase()];
+        if (newArk) {
+          try {
+            const rr = await newArk.setResources({ cores: o.cores, ramGB: o.ramGB, ...vmBudget() });
+            r.resources = rr;
+            if (rr.ok) logAudit('admin', `set compute ${rr.cores} vCPU / ${rr.ramGB} GB`, o.display);
+          } catch (e) { r.resources = { ok: false, error: e.message }; }
+        }
+      }
     }
     res.json(r);
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }

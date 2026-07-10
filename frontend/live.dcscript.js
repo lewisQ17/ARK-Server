@@ -244,7 +244,7 @@ class Component extends DCLogic {
       lines:[], consoleFilter:'all', consoleTab:'extinction', consoleSearch:'',
       settingsTab:'general', palette:false, toasts:[], rconBusy:false, update:null, rconInput:'',
       catalog:[], cfgQuery:'', cfgAdded:[], schedule:[], auditLog:[], cfgFile:null, backupList:[], selBkpName:null, addMap:null, newTask:null,
-      cfgOverride:{}, notifications:[], notifOpen:false, notifReadTs:0, pendingStatus:{}, cfgEdit:{}, platformOverride:null, computeDraft:null,
+      cfgOverride:{}, notifications:[], notifOpen:false, notifReadTs:0, pendingStatus:{}, cfgEdit:{}, platformOverride:null, computeDraft:null, computeOpen:false,
       confirmDelete:null, editWorld:null, cfgDraft:''
     };
   }
@@ -287,7 +287,9 @@ class Component extends DCLogic {
   setView(v){ this.setState({view:v}); if(v==='console') this.refreshConsole();
     if(v==='settings'){ this.ensureCatalog(); this.loadSchedule(); this.loadAudit(); }
     if(v==='backups'){ this.loadBackups(); this.loadSchedule(); } }
-  sel(id){ this.setState({sel:id,view:'instance'}); }
+  sel(id){ this.setState({sel:id,view:'instance',computeOpen:false,computeDraft:null}); }
+  toggleCompute(){ this.setState(s=>({computeOpen:!s.computeOpen})); }
+  closeCompute(){ this.setState({computeOpen:false}); }
   openConsole(id){ this.setState({consoleTab:id,view:'console'}, ()=>this.refreshConsole()); }
   setConsoleTab(id){ this.setState({consoleTab:id}, ()=>this.refreshConsole()); }
   setFilter(f){ this.setState({consoleFilter:f}); }
@@ -351,7 +353,7 @@ class Component extends DCLogic {
 
   // ---- Add map ----
   openAddMap(){
-    this.setState({addMap:{open:true, busy:false, error:null, available:[], form:{display:'',internal:'',sessionName:'',gamePort:'',queryPort:'',rconPort:'',maxPlayers:'70',adminPassword:'',serverPassword:''}}});
+    this.setState({addMap:{open:true, busy:false, error:null, available:[], form:{display:'',internal:'',sessionName:'',gamePort:'',queryPort:'',rconPort:'',maxPlayers:'70',adminPassword:'',serverPassword:'',cores:'',ramGB:''}}});
     api('/api/maps/available').then(r=>{
       const av=(r&&r.available)||[]; const p=(r&&r.ports)||{};
       this.setState(s=>s.addMap?{addMap:Object.assign({},s.addMap,{available:av, form:Object.assign({},s.addMap.form,{gamePort:String(p.gamePort||7777),queryPort:String(p.queryPort||27015),rconPort:String(p.rconPort||27020)})})}:null);
@@ -817,7 +819,9 @@ class Component extends DCLogic {
           fill:{position:'absolute',left:'0',top:'50%',transform:'translateY(-50%)',height:'6px',width:pct+'%',borderRadius:'99px',background:hot?'linear-gradient(90deg,var(--ember),var(--ember2))':'var(--cyan)'},
           knob:{position:'absolute',top:'50%',left:pct+'%',transform:'translate(-50%,-50%)',width:'14px',height:'14px',borderRadius:'99px',background:'#fff',border:'2px solid '+(hot?'var(--ember)':'var(--cyan)'),boxShadow:'0 1px 3px rgba(0,0,0,.4)'},
           rangeStyle:{position:'absolute',left:'0',top:'0',width:'100%',height:'18px',margin:'0',opacity:'0',cursor:'pointer',WebkitAppearance:'none',appearance:'none'}});
+        const capped=inst.coresAlloc!=null||inst.ramLimitGB!=null;
         return {vmCores, vmRam,
+          capped, summary: capped?((Math.round(svC*100)/100)+' vCPU · '+svR+' GB'):'Full VM',
           coresLabel:(Math.round(curC*100)/100)+' vCPU', ramLabel:curR+' GB',
           cpuShare:Math.round(curC/vmCores*100)+'% of '+vmCores+' vCPU', ramShare:Math.round(curR/vmRam*100)+'% of '+vmRam+' GB',
           liveLabel: liveGB!=null?(' · using '+liveGB+' GB now'):'',
@@ -831,6 +835,7 @@ class Component extends DCLogic {
           applyStyle:{display:'flex',alignItems:'center',gap:'6px',fontSize:'12px',fontWeight:700,color:dirty?'#0A0C10':'var(--mute)',background:dirty?(overcap?'linear-gradient(90deg,var(--amber),var(--amber))':'linear-gradient(90deg,var(--ember),var(--ember2))'):'var(--surface2)',border:dirty?'none':'1px solid var(--line2)',borderRadius:'8px',padding:'8px 14px',cursor:dirty?'pointer':'default',pointerEvents:dirty?'auto':'none',opacity:(draft&&draft.busy)?0.6:1},
           resetStyle:{fontSize:'11.5px',fontWeight:600,color:'var(--mute)',background:'none',border:'none',cursor:'pointer',display:dirty?'inline':'none'}};
       })(this, selectedInst, host, s.computeDraft),
+      computeOpen:!!s.computeOpen, toggleCompute:()=>this.toggleCompute(), closeCompute:()=>this.closeCompute(),
       // crossplay per platform (real -ServerPlatform= launch arg) — each badge toggles that platform
       crossPlatforms:[['PC','Steam'],['XSX','Xbox'],['PS5','PS5'],['WINGDK','Windows']].map(([tok,short])=>{ const on=effPlat[tok]!==false; return {name:short, short, on, toggle:()=>this.togglePlatform(tok, effPlat),
         style:{fontSize:'11px',fontWeight:600,borderRadius:'7px',padding:'5px 11px',cursor:'pointer',border:'1px solid '+(on?'rgba(55,211,195,.35)':'var(--line2)'),background:on?'rgba(55,211,195,.12)':'var(--surface2)',color:on?'var(--cyan)':'var(--mute)'}, mark:on?'✓ ':'',
@@ -862,7 +867,7 @@ class Component extends DCLogic {
       addMap: s.addMap ? (function(a,self){ return {busy:a.busy, error:a.error, hasError:!!a.error, form:a.form,
         available:(a.available||[]).map(m=>({display:m.display, active:a.form.display===m.display, select:()=>self.setAddField('display',m.display),
           style:{fontSize:'12px',fontWeight:a.form.display===m.display?700:500,padding:'7px 11px',borderRadius:'8px',cursor:'pointer',border:'1px solid '+(a.form.display===m.display?'var(--ember)':'var(--line2)'),background:a.form.display===m.display?'var(--ember-soft)':'var(--surface2)',color:a.form.display===m.display?'var(--ember)':'var(--dim)',whiteSpace:'nowrap'}})),
-        setSession:(e)=>self.setAddField('sessionName',e.target.value), setGame:(e)=>self.setAddField('gamePort',e.target.value), setQuery:(e)=>self.setAddField('queryPort',e.target.value), setRcon:(e)=>self.setAddField('rconPort',e.target.value), setMax:(e)=>self.setAddField('maxPlayers',e.target.value), setAdmin:(e)=>self.setAddField('adminPassword',e.target.value), setServer:(e)=>self.setAddField('serverPassword',e.target.value),
+        setSession:(e)=>self.setAddField('sessionName',e.target.value), setGame:(e)=>self.setAddField('gamePort',e.target.value), setQuery:(e)=>self.setAddField('queryPort',e.target.value), setRcon:(e)=>self.setAddField('rconPort',e.target.value), setMax:(e)=>self.setAddField('maxPlayers',e.target.value), setAdmin:(e)=>self.setAddField('adminPassword',e.target.value), setServer:(e)=>self.setAddField('serverPassword',e.target.value), setCores:(e)=>self.setAddField('cores',e.target.value), setRam:(e)=>self.setAddField('ramGB',e.target.value),
         submit:()=>self.submitAddMap(), close:()=>self.closeAddMap(), stop:(e)=>e.stopPropagation()}; })(s.addMap,this) : null,
       // new scheduled task modal
       newTaskOpen:!!(s.newTask&&s.newTask.open),
