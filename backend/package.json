@@ -1,0 +1,17 @@
+{
+  "name": "ark-server-dashboard",
+  "version": "1.0.0",
+  "description": "ARK: Survival Ascended server manager dashboard — live-connected to the ARK VM via Proxmox.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "undici": "^6.21.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

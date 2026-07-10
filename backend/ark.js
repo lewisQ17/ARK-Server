@@ -163,6 +163,56 @@ class ArkInstance {
     return { ok: /exit=0\b/.test(r.out || ''), output: (r.out || '').trim() };
   }
 
+  // Per-world compute allocation. Each world is its own systemd service, so we cap its
+  // share of the shared VM via cgroup properties: CPUQuota (CPU ceiling) + MemoryHigh
+  // (soft throttle) / MemoryMax (hard ceiling). Read current caps + live RAM usage.
+  async resources() {
+    if (!/^ark-[a-z0-9_.-]+$/.test(this.service)) return { ok: false, cores: null, ramGB: null, ramUsedGB: null };
+    const r = await this.pmx.guestShell(
+      `systemctl show ${this.service} -p CPUQuotaPerSecUSec -p MemoryMax -p MemoryCurrent 2>/dev/null`
+    );
+    const p = parseConf(r.out || '');
+    // CPUQuotaPerSecUSec is a CPU-time span per real second: 1s == 1 core, 500ms == 0.5 core.
+    const spanToCores = (v) => {
+      if (!v || /infinity/i.test(v)) return null;
+      let us = 0, any = false, m; const re = /(\d+)(min|ms|us|s)/g;
+      while ((m = re.exec(v))) { any = true; const n = +m[1]; us += m[2] === 'min' ? n * 6e7 : m[2] === 's' ? n * 1e6 : m[2] === 'ms' ? n * 1e3 : n; }
+      if (!any) { const n = parseInt(v, 10); if (!isNaN(n)) us = n; else return null; }
+      return Math.round((us / 1e6) * 100) / 100;
+    };
+    const bytesToGB = (v) => (!v || /infinity/i.test(v)) ? null : Math.round((parseInt(v, 10) / 1073741824) * 10) / 10;
+    return { ok: r.ok !== false, cores: spanToCores(p.CPUQuotaPerSecUSec), ramGB: bytesToGB(p.MemoryMax), ramUsedGB: bytesToGB(p.MemoryCurrent) };
+  }
+
+  // Apply CPU-core cap + RAM ceiling (GB) to this world. Persists (drop-in) and applies live.
+  // Clamped to the VM's total so one world can never claim more than the box has.
+  async setResources({ cores, ramGB, vmCores = 4, vmRam = 16, force = false }) {
+    if (!/^ark-[a-z0-9_.-]+$/.test(this.service)) return { ok: false, error: 'unsafe service name' };
+    // Read the world's current caps + live RAM use first. A missing/zero field then keeps its
+    // current value (never silently resets to the VM max), and we can refuse an unsafe shrink.
+    const cur = await this.resources().catch(() => null);
+    const curCores = cur && cur.cores != null ? cur.cores : vmCores;
+    const curRam = cur && cur.ramGB != null ? cur.ramGB : vmRam;
+    const reqC = Number(cores), reqR = Number(ramGB);
+    const c = Math.min(vmCores, Math.max(0.25, Number.isFinite(reqC) && reqC > 0 ? reqC : curCores));
+    const r = Math.min(vmRam, Math.max(1, Math.round(Number.isFinite(reqR) && reqR > 0 ? reqR : curRam)));
+    // OOM guard: writing MemoryMax below a running world's live RSS makes the cgroup OOM-killer
+    // terminate it (ARK memory is mostly non-reclaimable) → crash + lost progress. Refuse unless forced.
+    const liveGB = cur ? cur.ramUsedGB : null;
+    if (!force && liveGB != null && liveGB > 0.1 && r < liveGB * 1.15) {
+      return { ok: false, needsForce: true, liveGB, cores: c, ramGB: r,
+        error: `Requested ${r} GB is below this world's live use (${liveGB} GB). Stop the world first or raise the limit.` };
+    }
+    const quota = Math.round(c * 100) + '%';
+    const high = Math.max(256, Math.round(r * 0.9 * 1024)) + 'M';   // soft throttle in MB so 90% is real even for small caps
+    const max = r + 'G';
+    const res = await this.pmx.guestShell(
+      `systemctl set-property ${this.service} CPUQuota=${quota} MemoryHigh=${high} MemoryMax=${max} 2>&1; echo "rc=$?"`
+    );
+    const ok = /rc=0\b/.test(res.out || '');
+    return { ok, cores: c, ramGB: r, quota, memHigh: high, memMax: max, output: (res.out || '').replace(/rc=\d+\s*$/, '').trim() };
+  }
+
   async players() {
     const r = await this.rcon('ListPlayers');
     if (!r.ok) return { ok: false, error: r.error, players: [] };
@@ -202,6 +252,26 @@ class ArkInstance {
     if (!path) return { ok: false, error: 'config file not found', ini: '' };
     const r = await this.pmx.guestShell(`cat ${shq(path)} 2>/dev/null`, { asUser: this.user });
     return { ok: true, path, ini: redactSecrets(r.out || '') };
+  }
+
+  // Overwrite a whole config file with edited content. Any line the editor still shows
+  // redacted (KEY=••••••) is restored from the real on-disk value, so passwords are never
+  // exposed to the UI nor clobbered by a save.
+  async writeConfigRaw(which, content) {
+    const paths = await this.paths();
+    const path = which === 'game' ? paths.game : paths.gus;
+    if (!path) return { ok: false, error: 'config file not found' };
+    const cur = await this.pmx.guestShell(`cat ${shq(path)} 2>/dev/null`, { asUser: this.user });
+    const realVals = {};
+    (cur.out || '').split('\n').forEach((l) => { const m = l.match(/^\s*([A-Za-z0-9_]+)\s*=\s*(.*)$/); if (m) realVals[m[1]] = m[2]; });
+    const merged = String(content).split('\n').map((l) => {
+      const m = l.match(/^(\s*)([A-Za-z0-9_]+)(\s*=\s*)(.*)$/);
+      if (m && /[••]/.test(m[4]) && realVals[m[2]] != null) return m[1] + m[2] + m[3] + realVals[m[2]];
+      return l;
+    }).join('\n');
+    await this.pmx.guestExec(['/bin/sh', '-c', `cat > ${shq(path)}`], { asUser: this.user, inputData: asciiSafe(merged), timeoutMs: 15000 });
+    this._cfg = null;
+    return { ok: true, path };
   }
 
   // Write a single key=value under a section in GameUserSettings.ini (or Game.ini).
@@ -521,8 +591,9 @@ class ArkInstance {
   }
 
   // Add a scheduled task to arkadmin's crontab (real cron).
-  // extra (taskType 'multiplier'): { key, value, file, restart, endCron, revertValue } —
-  // a rate event writes TWO cron lines: start (boosted value) and end (back to normal).
+  // extra (taskType 'multiplier'): { rates:[{key,value,file,revertValue}], restart, endCron }
+  // (or legacy single { key, value, file, revertValue }). A rate event writes TWO cron
+  // lines: start (all rates boosted) and end (all rates reverted).
   async addSchedule(taskType, cron, message, extra = {}) {
     const okCron = (c) => /^[\d*/,\- ]+$/.test(String(c).trim()) && String(c).trim().split(/\s+/).length === 5;
     const clean = (m) => asciiSafe(String(m || 'Scheduled announcement').replace(/["\r\n]/g, '')).slice(0, 120);
@@ -530,18 +601,29 @@ class ArkInstance {
     if (!okCron(cron)) return { ok: false, error: 'invalid cron (need 5 fields)' };
     const lines = [];
     if (taskType === 'multiplier') {
-      const key = String(extra.key || '');
-      const file = extra.file === 'game' ? 'game' : 'gus';
-      const val = String(extra.value != null ? extra.value : '');
-      if (!/^[A-Za-z0-9_]+$/.test(key)) return { ok: false, error: 'invalid multiplier key' };
-      if (!/^-?\d+(\.\d+)?$/.test(val)) return { ok: false, error: 'invalid multiplier value' };
+      // Accept a list of rates, or fall back to the legacy single-rate fields.
+      const raw = (Array.isArray(extra.rates) && extra.rates.length)
+        ? extra.rates
+        : [{ key: extra.key, value: extra.value, file: extra.file, revertValue: extra.revertValue }];
+      const rates = [];
+      for (const r of raw) {
+        const key = String(r.key || '');
+        const file = r.file === 'game' ? 'game' : 'gus';
+        const val = String(r.value != null ? r.value : '');
+        const rev = String(r.revertValue != null ? r.revertValue : '1.0');
+        if (!/^[A-Za-z0-9_]+$/.test(key)) return { ok: false, error: 'invalid multiplier key: ' + (key || '(empty)') };
+        if (!/^-?\d+(\.\d+)?$/.test(val)) return { ok: false, error: 'invalid value for ' + key };
+        if (!/^-?\d+(\.\d+)?$/.test(rev)) return { ok: false, error: 'invalid revert value for ' + key };
+        rates.push({ key, file, val, rev });
+      }
+      if (!rates.length) return { ok: false, error: 'no rates given' };
       await this.ensureRateHelper();
       const restart = extra.restart ? ` ; ./ark-manager.sh restart ${this.display}` : '';
-      const mk = (c, v, m) => `${String(c).trim()} cd ${this.dir} && ./ark-manager.sh rcon ${this.display} "Broadcast ${m}" ; bash ${this.dir}/dashboard-set-rate.sh ${key} ${v} ${file} ${this.mapDir()}${restart}`;
-      lines.push(mk(cron, val, msg));
-      const revert = String(extra.revertValue != null ? extra.revertValue : '1.0');
-      if (okCron(extra.endCron) && /^-?\d+(\.\d+)?$/.test(revert)) {
-        lines.push(mk(extra.endCron, revert, clean('Event ended — ' + key + ' back to ' + revert + 'x')));
+      const setCmds = (useRevert) => rates.map((r) => `bash ${this.dir}/dashboard-set-rate.sh ${r.key} ${useRevert ? r.rev : r.val} ${r.file} ${this.mapDir()}`).join(' ; ');
+      const mk = (c, m, useRevert) => `${String(c).trim()} cd ${this.dir} && ./ark-manager.sh rcon ${this.display} "Broadcast ${m}" ; ${setCmds(useRevert)}${restart}`;
+      lines.push(mk(cron, msg, false));
+      if (okCron(extra.endCron)) {
+        lines.push(mk(extra.endCron, clean('Event ended — rates back to normal'), true));
       }
     } else if (taskType === 'backup') {
       const helper = await this.ensureBackupHelper();
@@ -556,8 +638,13 @@ class ArkInstance {
       lines.push(`${cron.trim()} cd ${this.dir} && ${cmds[taskType]}`);
     }
     const echoes = lines.map((l) => `echo ${shq(l)}`).join('; ');
-    const r = await this.pmx.guestShell(`( crontab -l 2>/dev/null; ${echoes} ) | crontab - && echo ADDED`, { asUser: this.user });
-    return { ok: /ADDED/.test(r.out || ''), lines };
+    // Add the line(s), then read the crontab back and confirm the job actually landed.
+    const verifyFrag = lines[0] ? lines[0].slice(-45) : '';
+    const r = await this.pmx.guestShell(
+      `( crontab -l 2>/dev/null; ${echoes} ) | crontab - && echo ADDED; ` +
+      (verifyFrag ? `crontab -l 2>/dev/null | grep -qF ${shq(verifyFrag)} && echo VERIFIED` : ''),
+      { asUser: this.user });
+    return { ok: /ADDED/.test(r.out || ''), verified: /VERIFIED/.test(r.out || ''), lines };
   }
 
   // Remove a cron line by a unique fragment (the command tail).

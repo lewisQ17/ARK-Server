@@ -1,0 +1,1013 @@
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#0A0C10}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#232C3A;border-radius:99px;border:2px solid #0A0C10}
+::-webkit-scrollbar-thumb:hover{background:#2E3846}
+::-webkit-scrollbar-track{background:transparent}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(255,178,62,.5)}70%{box-shadow:0 0 0 7px rgba(255,178,62,0)}100%{box-shadow:0 0 0 0 rgba(255,178,62,0)}}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes eq{0%,100%{transform:scaleY(.4)}50%{transform:scaleY(1)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes flow{to{stroke-dashoffset:-28}}
+@keyframes flow2{to{stroke-dashoffset:-40}}
+</style>
+</helmet>
+<div ref="{{ rootRef }}" style="--bg:#0A0C10;--bg2:#0D1015;--surface:#12161D;--surface2:#171C25;--card:#131820;--elevated:#1B2230;--line:#212936;--line2:#2C3644;--text:#E7ECF3;--dim:#93A0B2;--mute:#5C6979;--faint:#3A4757;--ember:#FF7A2E;--ember2:#FFA363;--ember-soft:rgba(255,122,46,0.13);--cyan:#37D3C3;--cyan-soft:rgba(55,211,195,0.12);--violet:#8C7BF7;--green:#37D67A;--amber:#FFB23E;--blue:#5AA9FF;--red:#FF5B5B;--grey:#6B7686;--pad:18px;--gap:16px;--radius:14px;font-family:Archivo,system-ui,sans-serif;color:var(--text);background:var(--bg);height:100vh;display:grid;grid-template-columns:256px 1fr;overflow:hidden;font-size:14px;-webkit-font-smoothing:antialiased">
+
+  <aside style="background:linear-gradient(180deg,#0C0F14,#0A0C10);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;padding:16px 14px">
+    <div style="display:flex;align-items:center;gap:11px;padding:6px 6px 16px">
+      <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(140deg,var(--ember),#C6491A);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(255,122,46,.35);flex:none">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#0A0C10" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19 12 4l8 15"/><path d="M8.4 14.5h7.2"/></svg>
+      </div>
+      <div style="min-width:0">
+        <div style="font-weight:800;font-size:14px;letter-spacing:.02em">ARK CONTROL</div>
+        <div style="font-size:10.5px;color:var(--mute);letter-spacing:.06em;text-transform:uppercase">Server Manager</div>
+      </div>
+    </div>
+
+    <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);padding:6px 8px 8px;font-weight:600">Control</div>
+    <nav style="display:flex;flex-direction:column;gap:2px">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="7">
+        <button onClick="{{ n.go }}" style="{{ n.style }}" style-hover="background:var(--surface2);color:var(--text)">
+          <span style="{{ n.iconStyle }}">{{ n.icon }}</span>
+          <span style="flex:1;text-align:left;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ n.label }}</span>
+          <sc-if value="{{ n.badge }}" hint-placeholder-val="{{ true }}"><span style="{{ n.badgeStyle }}">{{ n.badge }}</span></sc-if>
+        </button>
+      </sc-for>
+    </nav>
+
+    <div style="flex:1"></div>
+
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px">
+        <span style="width:9px;height:9px;border-radius:99px;background:var(--green);box-shadow:0 0 10px var(--green)"></span>
+        <span style="font-size:11.5px;font-weight:600;flex:1">{{ host.statusLabel }}</span>
+        <span style="font-size:10px;color:var(--mute);font-family:'JetBrains Mono',monospace">{{ host.name }}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:10.5px;margin-bottom:4px"><span style="color:var(--dim)">RAM</span><span style="font-family:'JetBrains Mono',monospace;color:var(--text)">{{ host.ram }}</span></div>
+          <div style="height:5px;border-radius:99px;background:var(--line);overflow:hidden"><div style="{{ host.ramBarStyle }}"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:10.5px;margin-bottom:4px"><span style="color:var(--dim)">CPU</span><span style="font-family:'JetBrains Mono',monospace;color:var(--text)">{{ host.cpu }}</span></div>
+          <div style="height:5px;border-radius:99px;background:var(--line);overflow:hidden"><div style="{{ host.cpuBarStyle }}"></div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--dim)">Disk</span><span style="font-family:'JetBrains Mono',monospace;color:var(--text)">{{ host.disk }}</span></div>
+        <div style="display:flex;align-items:center;gap:7px;padding-top:2px;border-top:1px solid var(--line);margin-top:2px;padding-top:9px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13.5A7.5 7.5 0 0 1 10.5 4 7.5 7.5 0 1 0 20 13.5Z"/></svg>
+          <span style="font-size:10.5px;color:var(--dim)">{{ host.note }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 6px 2px">
+      <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#2C3644,#1B2230);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--dim);flex:none">AD</div>
+      <div style="min-width:0;flex:1"><div style="font-size:12px;font-weight:600">admin</div><div style="font-size:10px;color:var(--mute)">Owner · this device</div></div>
+      <span style="width:7px;height:7px;border-radius:99px;background:var(--green)"></span>
+    </div>
+  </aside>
+
+  <div style="display:flex;flex-direction:column;min-width:0;height:100vh">
+    <header style="display:flex;align-items:center;gap:16px;padding:15px 24px;border-bottom:1px solid var(--line);background:rgba(10,12,16,.7);backdrop-filter:blur(8px);flex:none">
+      <div style="min-width:0;flex:1">
+        <h1 style="margin:0;font-size:20px;font-weight:800;letter-spacing:-.02em">{{ title }}</h1>
+        <div style="font-size:12px;color:var(--mute);margin-top:1px;font-family:'JetBrains Mono',monospace">{{ subtitle }}</div>
+      </div>
+      <div onClick="{{ openPalette }}" style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:7px 11px;width:250px;color:var(--mute);cursor:pointer" style-hover="border-color:var(--line2);color:var(--dim)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.6-3.6"/></svg>
+        <span style="font-size:12px;flex:1">Search players, files, RCON…</span>
+        <span style="font-size:9.5px;border:1px solid var(--line2);border-radius:5px;padding:1px 5px;font-family:'JetBrains Mono',monospace">⌘K</span>
+      </div>
+<div style="position:relative">
+      <button onClick="{{ toggleNotif }}" title="Notifications" style="position:relative;width:38px;height:38px;border-radius:10px;background:var(--surface);border:1px solid var(--line);color:var(--dim);display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="color:var(--text);border-color:var(--line2)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 9a5.5 5.5 0 0 1 11 0c0 4 1.4 5.5 1.4 5.5H5.1S6.5 13 6.5 9Z"/><path d="M10 18.5a2 2 0 0 0 4 0"/></svg>
+        <sc-if value="{{ notifUnread }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:5px;right:6px;min-width:15px;height:15px;padding:0 3px;border-radius:99px;background:var(--ember);color:#0A0C10;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--surface)">{{ notifCount }}</span></sc-if>
+      </button>
+      <sc-if value="{{ notifOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeNotif }}" style="position:fixed;inset:0;z-index:70"></div>
+        <div style="position:absolute;top:46px;right:0;z-index:71;width:320px;max-height:400px;overflow:auto;background:var(--elevated);border:1px solid var(--line2);border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,.55)">
+          <div style="display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)"><span style="font-size:12.5px;font-weight:700;flex:1">Notifications</span><button onClick="{{ clearNotif }}" style="font-size:10.5px;color:var(--mute);background:none;border:none;cursor:pointer" style-hover="color:var(--text)">Clear</button></div>
+          <sc-for list="{{ notifItems }}" as="n" hint-placeholder-count="0">
+            <div style="display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(33,41,54,.5)"><span style="{{ n.dot }}"></span><div style="min-width:0;flex:1"><div style="font-size:12px;line-height:1.4">{{ n.msg }}</div><div style="font-size:10px;color:var(--mute);font-family:'JetBrains Mono',monospace;margin-top:2px">{{ n.ago }}</div></div><button onClick="{{ n.dismiss }}" title="Dismiss" style="width:20px;height:20px;flex:none;border-radius:5px;background:none;border:none;color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:var(--red)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6 18 18M18 6 6 18"/></svg></button></div>
+          </sc-for>
+          <sc-if value="{{ notifHasAny }}" hint-placeholder-val="{{ false }}"><span></span></sc-if>
+          <sc-if value="{{ notifEmpty }}" hint-placeholder-val="{{ true }}"><div style="padding:22px;text-align:center;font-size:11.5px;color:var(--mute)">No notifications yet</div></sc-if>
+        </div>
+      </sc-if>
+      </div>
+      <div style="text-align:right;font-family:'JetBrains Mono',monospace;padding-left:4px">
+        <div style="font-size:15px;font-weight:600;letter-spacing:.02em">{{ clock }}</div>
+        <div style="font-size:10px;color:var(--mute)">{{ date }}</div>
+      </div>
+    </header>
+
+    <sc-if value="{{ hasEvent }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 24px;background:linear-gradient(90deg,rgba(255,122,46,.14),rgba(255,122,46,.03) 60%,transparent);border-bottom:1px solid var(--line);flex:none">
+      <span style="display:flex;align-items:center;gap:7px;color:var(--ember);font-weight:700;font-size:12px;flex:none">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--ember)" stroke="none"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>
+        {{ eventLabel }}
+      </span>
+      <span style="font-size:12.5px;color:var(--text)">{{ eventDesc }}</span>
+      <span style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace;flex:1">{{ eventWhen }}</span>
+      <button onClick="{{ goSettings }}" style="font-size:11px;font-weight:600;color:var(--ember);background:rgba(255,122,46,.12);border:1px solid rgba(255,122,46,.3);border-radius:7px;padding:4px 11px;cursor:pointer">Manage events</button>
+    </div>
+    </sc-if>
+
+    <main style="flex:1;overflow:auto;min-height:0;background:radial-gradient(1100px 500px at 78% -12%,rgba(255,122,46,.05),transparent 60%),var(--bg)">
+
+      <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:22px 24px 40px;display:flex;flex-direction:column;gap:var(--gap)">
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--gap)">
+          <div style="background:linear-gradient(160deg,rgba(55,214,122,.1),var(--card));border:1px solid rgba(55,214,122,.25);border-radius:var(--radius);padding:var(--pad);display:flex;gap:14px;align-items:center">
+            <div style="width:46px;height:46px;border-radius:12px;background:rgba(55,214,122,.14);display:flex;align-items:center;justify-content:center;flex:none">
+              <span style="width:16px;height:16px;border-radius:99px;background:var(--green);box-shadow:0 0 14px var(--green)"></span>
+            </div>
+            <div><div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Server health</div><div style="font-size:20px;font-weight:800;color:{{ clusterColor }};letter-spacing:-.01em">{{ clusterHealth }}</div><div style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace">{{ clusterSub }}</div></div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad)">
+            <div style="display:flex;justify-content:space-between;align-items:start"><span style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Players online</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M15.5 6a3 3 0 0 1 0 5.4M16.5 19a5.5 5.5 0 0 0-2-4.3"/></svg></div>
+            <div style="font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace;margin-top:6px">{{ totalPlayers }}<span style="font-size:15px;color:var(--mute);font-weight:500"> / {{ totalMax }}</span></div>
+            <div style="display:flex;align-items:flex-end;gap:10px;margin-top:5px">
+              <svg viewBox="0 0 120 30" preserveAspectRatio="none" style="flex:1;height:28px;display:block">
+                <defs><linearGradient id="pspark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#37D67A" stop-opacity="0.3"/><stop offset="1" stop-color="#37D67A" stop-opacity="0"/></linearGradient></defs>
+                <path d="{{ playersArea }}" fill="url(#pspark)"/>
+                <path d="{{ playersLine }}" fill="none" stroke="#37D67A" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+              </svg>
+              <span style="font-size:10px;color:var(--green);font-family:'JetBrains Mono',monospace;flex:none">{{ playersTrend }}</span>
+            </div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad)">
+            <div style="display:flex;justify-content:space-between;align-items:start"><span style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Host memory</span><span style="font-size:11px;color:var(--ember);font-family:'JetBrains Mono',monospace;font-weight:600">{{ host.memPctStr }}</span></div>
+            <div style="font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace;margin-top:6px">{{ host.memBig }}<span style="font-size:15px;color:var(--mute);font-weight:500"> / {{ host.memTotal }} GB</span></div>
+            <div style="height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:8px"><div style="{{ host.ramBarStyle }}"></div></div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad)">
+            <div style="display:flex;justify-content:space-between;align-items:start"><span style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Instances</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="6" rx="1.6"/><rect x="3.5" y="13" width="17" height="6" rx="1.6"/></svg></div>
+            <div style="font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace;margin-top:6px">{{ running }}<span style="font-size:15px;color:var(--mute);font-weight:500"> / {{ instCount }} running</span></div>
+            <div style="display:flex;gap:5px;margin-top:9px">
+              <sc-for list="{{ instBars }}" as="ib" hint-placeholder-count="1"><span style="{{ ib.style }}"></span></sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 336px;gap:var(--gap);align-items:start">
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)">
+            <sc-for list="{{ insts }}" as="i" hint-placeholder-count="4">
+              <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad);display:flex;flex-direction:column;gap:14px;min-width:0;animation:rise .4s ease both" style-hover="border-color:var(--line2)">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <div style="{{ i.emblemStyle }}">{{ i.icon }}</div>
+                  <div style="min-width:0;flex:1">
+                    <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;font-size:15.5px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ i.name }}</span><span style="font-size:9.5px;color:var(--mute);border:1px solid var(--line2);padding:1px 6px;border-radius:5px;font-weight:600;flex:none">{{ i.gamemode }}</span></div>
+                    <div style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace;margin-top:3px">v{{ i.ver }} · {{ i.mods }} mods · {{ i.map }}</div>
+                  </div>
+                  <span style="{{ i.pillStyle }}"><span style="{{ i.dotStyle }}"></span>{{ i.statusLabel }}</span>
+                  <button onClick="{{ i.del }}" title="Delete this world" style="width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--mute);background:var(--surface2);border:1px solid var(--line2);border-radius:8px;cursor:pointer" style-hover="color:var(--red);border-color:var(--red)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></button>
+                </div>
+
+                <div style="display:flex;gap:18px;font-family:'JetBrains Mono',monospace">
+                  <div><div style="font-size:10px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em">Players</div><div style="font-size:16px;font-weight:600;margin-top:2px">{{ i.playersStr }}</div></div>
+                  <div><div style="font-size:10px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em">Uptime</div><div style="font-size:16px;font-weight:600;margin-top:2px">{{ i.uptime }}</div></div>
+                  <div style="flex:1"><div style="font-size:10px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em">CPU</div><div style="font-size:16px;font-weight:600;margin-top:2px;color:{{ i.cpuColor }}">{{ i.cpuStr }}</div></div>
+                  <sc-if value="{{ i.hasUpd }}" hint-placeholder-val="{{ true }}"><span style="align-self:center;display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:var(--blue);background:rgba(90,169,255,.12);border:1px solid rgba(90,169,255,.3);padding:3px 8px;border-radius:6px"><span style="width:6px;height:6px;border-radius:99px;background:var(--blue)"></span>v{{ i.upd }}</span></sc-if>
+                </div>
+
+                <div style="height:52px;position:relative;border-radius:8px;overflow:hidden;background:var(--bg2)">
+                  <svg viewBox="0 0 120 52" preserveAspectRatio="none" style="width:100%;height:100%;display:block">
+                    <defs><linearGradient id="{{ i.gid }}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{{ i.spColor }}" stop-opacity="0.35"/><stop offset="1" stop-color="{{ i.spColor }}" stop-opacity="0"/></linearGradient></defs>
+                    <path d="{{ i.sparkArea }}" fill="url(#{{ i.gid }})"/>
+                    <path d="{{ i.sparkLine }}" fill="none" stroke="{{ i.spColor }}" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+                  </svg>
+                  <div style="position:absolute;left:9px;top:7px;font-size:9.5px;color:var(--mute);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.08em">CPU · 5 min</div>
+                  <div style="position:absolute;right:9px;bottom:6px;font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace">RAM {{ i.ramUsed }}/{{ i.ramAlloc }}G</div>
+                </div>
+
+                <div style="display:flex;gap:8px">
+                  <sc-if value="{{ i.isSleeping }}" hint-placeholder-val="{{ true }}">
+                    <button onClick="{{ i.wake }}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;font-size:12.5px;font-weight:700;color:#0A0C10;background:linear-gradient(90deg,var(--ember),var(--ember2));border:none;border-radius:9px;padding:9px;cursor:pointer">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A0C10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5v7M7 7.5a7 7 0 1 0 10 0"/></svg>Wake up · ~40s</button>
+                    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--blue);background:rgba(90,169,255,.1);border:1px solid rgba(90,169,255,.25);border-radius:9px;padding:0 12px;font-family:'JetBrains Mono',monospace">saved {{ i.savedRam }}GB</div>
+                  </sc-if>
+                  <sc-if value="{{ i.isStarting }}" hint-placeholder-val="{{ true }}">
+                    <div style="flex:1;display:flex;align-items:center;gap:9px;font-size:11.5px;color:var(--amber);background:rgba(255,178,62,.09);border:1px solid rgba(255,178,62,.25);border-radius:9px;padding:9px 12px;font-family:'JetBrains Mono',monospace"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" style="animation:spin 1s linear infinite"><path d="M12 3a9 9 0 1 0 9 9" opacity=".9"/></svg>Booting · loading mods… {{ i.bootLabel }}</div>
+                  </sc-if>
+                  <sc-if value="{{ i.isRunning }}" hint-placeholder-val="{{ true }}">
+                    <button onClick="{{ i.open }}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--text);background:var(--surface2);border:1px solid var(--line2);border-radius:9px;padding:9px;cursor:pointer" style-hover="border-color:var(--ember);color:var(--ember)">Open control</button>
+                    <button onClick="{{ i.console }}" style="width:40px;display:flex;align-items:center;justify-content:center;color:var(--dim);background:var(--surface2);border:1px solid var(--line2);border-radius:9px;cursor:pointer" style-hover="color:var(--text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l3 3-3 3M12.5 15H18"/></svg></button>
+                    <button onClick="{{ i.restart }}" style="width:40px;display:flex;align-items:center;justify-content:center;color:var(--dim);background:var(--surface2);border:1px solid var(--line2);border-radius:9px;cursor:pointer" style-hover="color:var(--amber)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12a7.5 7.5 0 1 1 2.3 5.4M4.2 20v-4.2h4.2"/></svg></button>
+                  </sc-if>
+                  <sc-if value="{{ i.isStopped }}" hint-placeholder-val="{{ true }}">
+                    <button onClick="{{ i.wake }}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;font-size:12.5px;font-weight:700;color:#0A0C10;background:linear-gradient(90deg,var(--ember),var(--ember2));border:none;border-radius:9px;padding:9px;cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A0C10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14l11-7z"/></svg>Start server</button>
+                    <button onClick="{{ i.console }}" style="width:40px;display:flex;align-items:center;justify-content:center;color:var(--dim);background:var(--surface2);border:1px solid var(--line2);border-radius:9px;cursor:pointer" style-hover="color:var(--text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l3 3-3 3M12.5 15H18"/></svg></button>
+                  </sc-if>
+                  <sc-if value="{{ i.isUnprovisioned }}" hint-placeholder-val="{{ true }}">
+                    <button onClick="{{ i.deploy }}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--dim);background:var(--surface2);border:1px dashed var(--line2);border-radius:9px;padding:9px;cursor:pointer" style-hover="color:var(--ember);border-color:var(--ember)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Deploy map</button>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-for>
+            <button onClick="{{ openAddMap }}" style="background:var(--card);border:1px dashed var(--line2);border-radius:var(--radius);padding:var(--pad);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:150px;cursor:pointer;color:var(--dim);font:inherit" style-hover="border-color:var(--ember);color:var(--ember)">
+              <span style="width:42px;height:42px;border-radius:12px;background:var(--ember-soft);display:flex;align-items:center;justify-content:center;color:var(--ember)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+              <span style="font-size:13px;font-weight:700">Add a map</span>
+              <span style="font-size:11px;color:var(--mute);text-align:center;max-width:200px">Create a new ARK map — ports auto-suggested, ready to start</span>
+            </button>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:var(--gap)">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden">
+              <div style="display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--line)"><span style="width:7px;height:7px;border-radius:99px;background:var(--green);animation:pulse 2s infinite"></span><span style="font-size:12.5px;font-weight:700;flex:1">Live activity</span><span style="font-size:10px;color:var(--mute);font-family:'JetBrains Mono',monospace">all maps</span></div>
+              <div style="display:flex;flex-direction:column;max-height:280px;overflow:auto">
+                <sc-for list="{{ feed }}" as="f" hint-placeholder-count="6">
+                  <div style="display:flex;align-items:center;gap:11px;padding:10px 16px;border-bottom:1px solid rgba(33,41,54,.5)">
+                    <span style="{{ f.dot }}"></span>
+                    <div style="min-width:0;flex:1"><div style="font-size:12.5px"><span style="font-weight:600">{{ f.who }}</span> <span style="color:var(--dim)">{{ f.action }}</span></div><div style="font-size:10.5px;color:var(--mute);font-family:'JetBrains Mono',monospace">{{ f.map }}</div></div>
+                    <span style="font-size:10.5px;color:var(--mute);font-family:'JetBrains Mono',monospace;flex:none">{{ f.ago }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 1.8"/></svg><span style="font-size:12.5px;font-weight:700;flex:1">Upcoming tasks</span><button onClick="{{ goSettings }}" style="font-size:10.5px;color:var(--ember);background:none;border:none;cursor:pointer;font-weight:600">Schedule</button></div>
+              <div style="display:flex;flex-direction:column;gap:11px">
+                <sc-for list="{{ tasks }}" as="t" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:11px">
+                    <div style="width:32px;height:32px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:{{ t.color }};flex:none">{{ t.icon }}</div>
+                    <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600">{{ t.name }}</div><div style="font-size:10.5px;color:var(--mute);font-family:'JetBrains Mono',monospace">{{ t.when }}</div></div>
+                    <span style="font-size:10.5px;color:var(--dim);font-family:'JetBrains Mono',monospace">{{ t.in }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background:linear-gradient(160deg,rgba(88,101,242,.08),var(--card));border:1px solid rgba(88,101,242,.22);border-radius:var(--radius);padding:16px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A93F0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8.5c2.7-1 5.3-1 8 0M8 15.5c2.7 1 5.3 1 8 0"/><circle cx="9.5" cy="12.3" r="1.1"/><circle cx="14.5" cy="12.3" r="1.1"/></svg><span style="font-size:12.5px;font-weight:700;flex:1">Discord webhook</span><span style="font-size:10px;color:var(--mute);display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:99px;background:var(--mute)"></span>Off</span></div>
+              <div style="font-size:11.5px;color:var(--dim);line-height:1.6">Not configured — add a webhook URL in Settings to post joins, crashes &amp; backups to Discord.</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isInstance }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:22px 24px 40px;display:flex;flex-direction:column;gap:var(--gap)">
+
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad);display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="{{ sel.emblemStyle }}">{{ sel.icon }}</div>
+          <div style="min-width:0">
+            <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px;font-weight:800;letter-spacing:-.02em">{{ sel.name }}</span><span style="{{ sel.pillStyle }}"><span style="{{ sel.dotStyle }}"></span>{{ sel.statusLabel }}</span></div>
+            <div style="font-size:11.5px;color:var(--mute);font-family:'JetBrains Mono',monospace;margin-top:3px">{{ sel.map }} · {{ sel.gamemode }} · uptime {{ sel.uptime }}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px">
+            <span style="width:11px;height:11px;border-radius:99px;background:{{ sel.healthColor }};box-shadow:0 0 10px {{ sel.healthColor }}"></span>
+            <span style="font-size:12px;font-weight:600">{{ sel.healthLabel }}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/></svg>
+            <span style="font-size:12px;font-family:'JetBrains Mono',monospace">{{ sel.dayTime }}</span>
+          </div>
+          <div style="flex:1;min-width:8px"></div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;justify-content:flex-end;margin-left:auto">
+            <sc-if value="{{ selUpdAvail }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ openUpdate }}" style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:#0A0C10;background:linear-gradient(90deg,var(--blue),#8FC4FF);border:none;border-radius:9px;padding:9px 14px;cursor:pointer;box-shadow:0 0 0 0 rgba(90,169,255,.5);animation:ring 2.4s infinite" style-hover="filter:brightness(1.06)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A0C10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>Update · v{{ selUpdVer }}</button>
+            </sc-if>
+            <button onClick="{{ openUpdate }}" style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--dim);background:var(--surface2);border:1px solid var(--line2);border-radius:9px;padding:9px 13px;cursor:pointer" style-hover="color:var(--blue);border-color:var(--blue)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12a7.5 7.5 0 0 1 12.7-5.4L20 9M20 4v5h-5"/></svg>Check updates</button>
+            <button onClick="{{ macroSave }}" style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--text);background:var(--surface2);border:1px solid var(--line2);border-radius:9px;padding:9px 13px;cursor:pointer" style-hover="border-color:var(--line2);color:var(--ember)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7"/></svg>Save world</button>
+            <button onClick="{{ doRestart }}" style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--amber);background:rgba(255,178,62,.1);border:1px solid rgba(255,178,62,.28);border-radius:9px;padding:9px 13px;cursor:pointer" style-hover="background:rgba(255,178,62,.16)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12a7.5 7.5 0 1 1 2.3 5.4M4.2 20v-4.2h4.2"/></svg>Restart</button>
+            <button onClick="{{ doStop }}" style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#0A0C10;background:var(--red);border:none;border-radius:9px;padding:9px 14px;cursor:pointer" style-hover="filter:brightness(1.08)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A0C10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/></svg>Stop</button>
+            <button onClick="{{ openEditWorld }}" title="Edit world" style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex:none;color:var(--dim);background:var(--surface2);border:1px solid var(--line2);border-radius:9px;padding:0;cursor:pointer" style-hover="color:var(--text);border-color:var(--line2)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/></svg></button>
+            <button onClick="{{ delSelWorld }}" title="Delete this world" style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex:none;color:var(--red);background:rgba(255,91,91,.1);border:1px solid rgba(255,91,91,.28);border-radius:9px;padding:0;cursor:pointer" style-hover="background:rgba(255,91,91,.16)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></button>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--gap)">
+          <sc-for list="{{ sel.metrics }}" as="m" hint-placeholder-count="4">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad)">
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600">{{ m.k }}</span><span style="font-size:10px;color:var(--mute)">{{ m.sub }}</span></div>
+              <div style="font-family:'JetBrains Mono',monospace;margin-top:8px;display:flex;align-items:baseline;gap:5px"><span style="font-size:24px;font-weight:700">{{ m.big }}</span><span style="font-size:13px;color:var(--mute)">{{ m.unit }}</span></div>
+              <div style="height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:9px"><div style="{{ m.barStyle }}"></div></div>
+              <div style="font-size:10.5px;color:var(--mute);font-family:'JetBrains Mono',monospace;margin-top:6px">{{ m.alloc }}</div>
+              <sc-if value="{{ m.flag }}" hint-placeholder-val="{{ true }}"><div style="margin-top:8px;font-size:10.5px;color:var(--amber);background:rgba(255,178,62,.1);border:1px solid rgba(255,178,62,.25);border-radius:6px;padding:4px 8px;display:flex;align-items:center;gap:5px"><span style="width:5px;height:5px;border-radius:99px;background:var(--amber)"></span>{{ m.flag }}</div></sc-if>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></svg>
+            <span style="font-size:13px;font-weight:700;flex:1">Compute allocation <span style="color:var(--mute);font-weight:500;font-family:'JetBrains Mono',monospace">· this world's share of the VM</span></span>
+            <button onClick="{{ compute.reset }}" style="{{ compute.resetStyle }}">reset</button>
+            <button onClick="{{ compute.apply }}" style="{{ compute.applyStyle }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Apply</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:26px">
+            <div>
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px"><span style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600">CPU</span><span style="font-size:18px;font-weight:700;font-family:'JetBrains Mono',monospace">{{ compute.coresLabel }}</span></div>
+              <div style="position:relative;height:18px"><div style="{{ compute.cpu.track }}"></div><div style="{{ compute.cpu.fill }}"></div><div style="{{ compute.cpu.knob }}"></div><input type="range" min="{{ compute.cpuSMin }}" max="{{ compute.cpuSMax }}" step="{{ compute.cpuSStep }}" value="{{ compute.cpuSVal }}" onChange="{{ compute.onCpu }}" style="{{ compute.cpu.rangeStyle }}" /></div>
+              <div style="font-size:10.5px;color:var(--mute);font-family:'JetBrains Mono',monospace;margin-top:10px">{{ compute.cpuShare }}</div>
+            </div>
+            <div>
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px"><span style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Memory</span><span style="font-size:18px;font-weight:700;font-family:'JetBrains Mono',monospace">{{ compute.ramLabel }}</span></div>
+              <div style="position:relative;height:18px"><div style="{{ compute.mem.track }}"></div><div style="{{ compute.mem.fill }}"></div><div style="{{ compute.mem.knob }}"></div><input type="range" min="{{ compute.ramSMin }}" max="{{ compute.ramSMax }}" step="{{ compute.ramSStep }}" value="{{ compute.ramSVal }}" onChange="{{ compute.onRam }}" style="{{ compute.mem.rangeStyle }}" /></div>
+              <div style="font-size:10.5px;color:var(--mute);font-family:'JetBrains Mono',monospace;margin-top:10px">{{ compute.ramShare }}{{ compute.liveLabel }}</div>
+            </div>
+          </div>
+          <sc-if value="{{ compute.warn }}" hint-placeholder-val="{{ true }}">
+            <div style="margin-top:15px;font-size:11px;color:var(--amber);background:rgba(255,178,62,.1);border:1px solid rgba(255,178,62,.25);border-radius:7px;padding:7px 11px;display:flex;align-items:center;gap:7px"><span style="width:5px;height:5px;border-radius:99px;background:var(--amber);flex:none"></span>{{ compute.warn }}</div>
+          </sc-if>
+          <div style="margin-top:14px;font-size:10.5px;color:var(--faint);line-height:1.5">Applied live as a systemd cgroup cap on this world — no VM reboot. Splitting the VM between worlds keeps one map from starving the others.</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 340px;gap:var(--gap);align-items:start">
+          <div style="display:flex;flex-direction:column;gap:var(--gap)">
+
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad)">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+                <span style="font-size:13px;font-weight:700;flex:1">Resource history</span>
+                <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim)"><span style="width:9px;height:2px;background:var(--cyan);border-radius:2px"></span>CPU</span>
+                <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim)"><span style="width:9px;height:2px;background:var(--ember);border-radius:2px"></span>RAM</span>
+                <span style="font-size:10.5px;padding:3px 9px;border-radius:6px;background:var(--ember-soft);color:var(--ember);font-weight:600;font-family:'JetBrains Mono',monospace">last hour</span>
+              </div>
+              <div style="position:relative;height:172px">
+                <svg viewBox="0 0 620 150" preserveAspectRatio="none" style="width:100%;height:150px;display:block">
+                  <line x1="0" y1="37.5" x2="620" y2="37.5" stroke="#1a212c" stroke-width="1"/><line x1="0" y1="75" x2="620" y2="75" stroke="#1a212c" stroke-width="1"/><line x1="0" y1="112.5" x2="620" y2="112.5" stroke="#1a212c" stroke-width="1"/>
+                  <defs><linearGradient id="gcpuf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#37D3C3" stop-opacity="0.22"/><stop offset="1" stop-color="#37D3C3" stop-opacity="0"/></linearGradient></defs>
+                  <path d="{{ sel.graphCpuArea }}" fill="url(#gcpuf)"/>
+                  <path d="{{ sel.graphCpu }}" fill="none" stroke="#37D3C3" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+                  <path d="{{ sel.graphRam }}" fill="none" stroke="#FF7A2E" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+                </svg>
+                <div style="position:absolute;top:0;left:0;font-size:9.5px;color:var(--faint);font-family:'JetBrains Mono',monospace">100%</div>
+                <div style="position:absolute;bottom:16px;left:0;font-size:9.5px;color:var(--faint);font-family:'JetBrains Mono',monospace">0%</div>
+                <div style="position:absolute;bottom:0;right:0;font-size:9.5px;color:var(--faint);font-family:'JetBrains Mono',monospace">now · live VM metrics</div>
+              </div>
+            </div>
+
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden">
+              <div style="display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--line)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M15.5 6a3 3 0 0 1 0 5.4M16.5 19a5.5 5.5 0 0 0-2-4.3"/></svg>
+                <span style="font-size:13px;font-weight:700;flex:1">Players online <span style="color:var(--mute);font-weight:500;font-family:'JetBrains Mono',monospace">via RCON ListPlayers</span></span>
+                <span style="font-size:11px;color:var(--green);font-family:'JetBrains Mono',monospace">{{ sel.playerCount }} / {{ sel.max }}</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:9px 16px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:600">
+                <span>Survivor</span><span>Actions</span>
+              </div>
+              <sc-for list="{{ sel.players }}" as="p" hint-placeholder-count="6">
+                <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:10px 16px;border-bottom:1px solid rgba(33,41,54,.5);align-items:center;font-size:12.5px">
+                  <div style="display:flex;align-items:center;gap:9px;min-width:0"><span style="width:26px;height:26px;border-radius:7px;background:var(--surface2);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;color:var(--dim);font-family:'JetBrains Mono',monospace;flex:none">{{ p.av }}</span><span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span></div>
+                  <div style="display:flex;gap:5px">
+                    <button onClick="{{ p.whisper }}" title="Whisper via RCON" style="width:26px;height:26px;border-radius:6px;background:var(--surface2);border:1px solid var(--line);color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:var(--cyan)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v10H9l-4 3z"/></svg></button>
+                    <button onClick="{{ p.kick }}" title="Kick player" style="width:26px;height:26px;border-radius:6px;background:var(--surface2);border:1px solid var(--line);color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:var(--red)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6 18 18M18 6 6 18"/></svg></button>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ sel.isSleeping }}" hint-placeholder-val="{{ true }}"><div style="padding:26px;text-align:center;color:var(--mute);font-size:12.5px;font-family:'JetBrains Mono',monospace">Instance sleeping — wake to load player list</div></sc-if>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:var(--gap)">
+
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px">
+              <div style="font-size:12.5px;font-weight:700;margin-bottom:11px">RCON quick commands</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <sc-for list="{{ macros }}" as="mc" hint-placeholder-count="4">
+                  <button onClick="{{ mc.run }}" style="font-size:11.5px;font-weight:600;color:var(--dim);background:var(--surface2);border:1px solid var(--line2);border-radius:8px;padding:8px;cursor:pointer;font-family:'JetBrains Mono',monospace" style-hover="color:var(--ember);border-color:var(--ember)">{{ mc.label }}</button>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:9px">
+                <span style="color:var(--ember);font-family:'JetBrains Mono',monospace;font-size:12px">›</span>
+                <input value="{{ rconInput }}" onChange="{{ onRconInput }}" onKeyDown="{{ onRconKey }}" placeholder="custom RCON command…" style="flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11.5px" />
+                <button onClick="{{ sendRconInput }}" style="font-size:10px;font-weight:600;color:var(--ember);background:var(--ember-soft);border:1px solid rgba(255,122,46,.3);border-radius:5px;padding:3px 8px;cursor:pointer">send</button>
+              </div>
+            </div>
+
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px">
+              <div style="display:flex;align-items:center;margin-bottom:12px"><span style="font-size:12.5px;font-weight:700;flex:1">Rates &amp; multipliers</span><span style="font-size:10px;color:var(--mute);font-family:'JetBrains Mono',monospace">GameUserSettings.ini</span></div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <sc-for list="{{ sel.mult }}" as="mu" hint-placeholder-count="6">
+                  <div>
+                    <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px"><span style="font-size:12px;color:var(--dim);flex:1">{{ mu.k }}</span><span style="font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;color:{{ mu.valColor }}">{{ mu.v }}</span><span style="font-size:10px;color:var(--faint);font-family:'JetBrains Mono',monospace">base {{ mu.base }}</span></div>
+                    <div style="height:4px;border-radius:99px;background:var(--line);overflow:hidden"><div style="{{ mu.barStyle }}"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px">
+              <div style="font-size:12.5px;font-weight:700;margin-bottom:11px">Rules</div>
+              <div style="display:flex;flex-direction:column;gap:9px;font-size:12px">
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Mode</span><span style="color:var(--green);font-weight:600;background:rgba(55,214,122,.12);padding:1px 8px;border-radius:6px;font-size:11px">{{ sel.ruleMode }}</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Difficulty</span><span style="font-family:'JetBrains Mono',monospace">{{ sel.ruleDifficulty }}</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><span style="color:var(--dim);flex:none">Crossplay</span><span style="display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end"><sc-for list="{{ crossPlatforms }}" as="cp" hint-placeholder-count="5"><span style="{{ cp.miniStyle }}">{{ cp.name }}</span></sc-for></span></div>
+                <div style="border-top:1px solid var(--line);padding-top:10px;margin-top:2px">
+                  <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px"><span style="color:var(--dim)">Tame limit</span><span style="font-family:'JetBrains Mono',monospace;color:var(--amber);font-weight:600">{{ sel.ruleTameLimit }}</span></div>
+                </div>
+              </div>
+            </div>
+
+
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+
+      <sc-if value="{{ isConsole }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:20px 24px 28px;display:grid;grid-template-columns:1fr 300px;gap:var(--gap);height:100%;min-height:0">
+
+        <div style="display:flex;flex-direction:column;min-height:0;gap:12px">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <div style="display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:4px">
+              <sc-for list="{{ consoleTabs }}" as="c" hint-placeholder-count="4">
+                <button onClick="{{ c.go }}" style="{{ c.style }}"><span style="{{ c.dot }}"></span>{{ c.name }}</button>
+              </sc-for>
+            </div>
+            <div style="flex:1"></div>
+            <div style="display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:7px 10px;width:190px;color:var(--mute)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.6-3.6"/></svg>
+              <input value="{{ consoleSearch }}" onChange="{{ onConsoleSearch }}" placeholder="search log…" style="flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text);font-size:11.5px;font-family:'JetBrains Mono',monospace" />
+            </div>
+            <button onClick="{{ downloadConsole }}" title="Download log" style="width:34px;height:34px;border-radius:9px;background:var(--card);border:1px solid var(--line);color:var(--dim);display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="color:var(--text)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg></button>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-right:2px">Filter</span>
+            <sc-for list="{{ consoleFilters }}" as="f" hint-placeholder-count="5">
+              <button onClick="{{ f.go }}" style="{{ f.style }}">{{ f.label }}</button>
+            </sc-for>
+            <div style="flex:1"></div>
+            <span style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--green)"><span style="width:6px;height:6px;border-radius:99px;background:var(--green);animation:pulse 1.6s infinite"></span>streaming · autoscroll</span>
+          </div>
+
+          <div style="flex:1;min-height:0;background:#07090C;border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column">
+            <div ref="{{ logRef }}" style="flex:1;overflow:auto;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85">
+              <sc-for list="{{ consoleView }}" as="ln" hint-placeholder-count="12">
+                <div style="display:flex;gap:12px">
+                  <span style="color:{{ ln.tagColor }};font-weight:700;flex:none;width:42px;font-size:10px;padding-top:1px">{{ ln.tag }}</span>
+                  <span style="color:{{ ln.textColor }};min-width:0;word-break:break-word">{{ ln.txt }}</span>
+                </div>
+              </sc-for>
+              <div style="display:flex;gap:12px;color:var(--ember)"><span style="width:42px;flex:none"></span><span>›<span style="display:inline-block;width:8px;height:14px;background:var(--ember);margin-left:3px;vertical-align:middle;animation:blink 1s step-end infinite"></span></span></div>
+            </div>
+            <div style="border-top:1px solid var(--line);padding:11px 14px;display:flex;flex-direction:column;gap:9px">
+              <div style="display:flex;align-items:center;gap:10px;background:#0A0C10;border:1px solid var(--line);border-radius:8px;padding:9px 12px">
+                <span style="color:var(--ember);font-family:'JetBrains Mono',monospace;font-weight:700">›</span>
+                <input value="{{ rconInput }}" onChange="{{ onRconInput }}" onKeyDown="{{ onRconKey }}" placeholder="type an RCON command…" style="flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px" />
+                <button onClick="{{ sendRconInput }}" style="font-size:9.5px;font-weight:600;color:var(--ember);background:var(--ember-soft);border:1px solid rgba(255,122,46,.3);border-radius:5px;padding:3px 9px;cursor:pointer;font-family:'JetBrains Mono',monospace">↵ send</button>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <sc-for list="{{ consoleMacros }}" as="mc" hint-placeholder-count="6">
+                  <button onClick="{{ mc.run }}" style="font-size:11px;font-weight:600;color:var(--dim);background:var(--surface2);border:1px solid var(--line2);border-radius:7px;padding:5px 10px;cursor:pointer;font-family:'JetBrains Mono',monospace" style-hover="color:var(--ember);border-color:var(--ember)">{{ mc.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-direction:column;min-height:0;overflow:hidden">
+          <div style="display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h11M5 12h11M5 17h7"/><path d="M19 7v10"/></svg><span style="font-size:12.5px;font-weight:700;flex:1">Command audit</span><span style="font-size:10px;color:var(--mute)">who ran what</span></div>
+          <div style="flex:1;overflow:auto">
+            <sc-for list="{{ audit }}" as="a" hint-placeholder-count="7">
+              <div style="padding:11px 16px;border-bottom:1px solid rgba(33,41,54,.5)">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                  <span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:1px 6px;border-radius:5px;color:{{ a.whoColor }};background:{{ a.whoBg }}">{{ a.who }}</span>
+                  <span style="font-size:10px;color:var(--mute);font-family:'JetBrains Mono',monospace;flex:1;text-align:right">{{ a.ago }}</span>
+                </div>
+                <div style="font-size:11.5px;font-family:'JetBrains Mono',monospace;color:{{ a.cmdColor }};word-break:break-word">{{ a.cmd }}</div>
+                <div style="font-size:10px;color:var(--faint);margin-top:2px">→ {{ a.target }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isBackups }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:22px 24px 40px;display:flex;flex-direction:column;gap:var(--gap)">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:var(--gap)">
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad)">
+            <div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Snapshots</div>
+            <div style="font-family:'JetBrains Mono',monospace;margin-top:7px"><span style="font-size:24px;font-weight:700">{{ bkpCount }}</span><span style="font-size:13px;color:var(--mute)"> saved worlds</span></div>
+            <div style="font-size:11px;color:var(--mute);margin-top:9px">{{ bkpStorageNote }}</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad)">
+            <div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Automatic backups</div>
+            <div style="font-family:'JetBrains Mono',monospace;margin-top:7px"><span style="font-size:20px;font-weight:700;color:{{ autoBackupColor }}">{{ autoBackupState }}</span></div>
+            <div style="font-size:11px;color:var(--mute);margin-top:9px;line-height:1.5">{{ autoBackupNote }}</div>
+            <sc-for list="{{ backupSchedules }}" as="bs" hint-placeholder-count="0">
+              <div style="display:flex;align-items:center;gap:8px;margin-top:10px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:7px 10px"><span style="font-size:11px;flex:1;color:var(--dim)">{{ bs.human }}</span><button onClick="{{ bs.del }}" style="font-size:10.5px;font-weight:600;color:var(--red);background:rgba(255,91,91,.1);border:1px solid rgba(255,91,91,.25);border-radius:6px;padding:4px 9px;cursor:pointer">Turn off</button></div>
+            </sc-for>
+          </div>
+          <div style="background:linear-gradient(120deg,var(--ember-soft),var(--card));border:1px solid rgba(255,122,46,.28);border-radius:var(--radius);padding:var(--pad);display:flex;align-items:center;gap:14px">
+            <div style="flex:1"><div style="font-size:13px;font-weight:700">Create snapshot now</div><div style="font-size:11.5px;color:var(--dim);margin-top:3px">Saves {{ sel.name }}'s world to a timestamped backup</div></div>
+            <button onClick="{{ createBackupBtn }}" style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:#0A0C10;background:linear-gradient(90deg,var(--ember),var(--ember2));border:none;border-radius:9px;padding:10px 15px;cursor:pointer;white-space:nowrap" style-hover="filter:brightness(1.06)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A0C10" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Snapshot</button>
+          </div>
+        </div>
+
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad)">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ember)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1M3.2 4.2v3.4h3.4M12 8v4.3l3 1.8"/></svg>
+            <span style="font-size:13px;font-weight:700;flex:1">Save time-machine <span style="color:var(--mute);font-weight:500;font-family:'JetBrains Mono',monospace;font-size:11px">click a point to preview a rollback</span></span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim)"><span style="width:8px;height:8px;border-radius:99px;background:var(--cyan)"></span>Scheduled</span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim)"><span style="width:8px;height:8px;border-radius:99px;background:var(--ember)"></span>Manual</span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim)"><span style="width:8px;height:8px;border-radius:99px;background:var(--violet)"></span>Pre-update</span>
+          </div>
+          <div style="position:relative;height:56px;margin:0 8px">
+            <div style="position:absolute;top:50%;left:0;right:0;height:2px;background:var(--line2);transform:translateY(-50%)"></div>
+            <div style="position:absolute;top:50%;left:0;width:96%;height:2px;background:linear-gradient(90deg,var(--line2),var(--ember));transform:translateY(-50%);opacity:.5"></div>
+            <sc-for list="{{ backups }}" as="b" hint-placeholder-count="7">
+              <div style="{{ b.scrubStyle }}"></div>
+              <div onClick="{{ b.select }}" style="{{ b.dotStyle }}"></div>
+            </sc-for>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin:6px 8px 0;font-size:10px;color:var(--faint);font-family:'JetBrains Mono',monospace"><span>2 days ago</span><span>yesterday</span><span>12h</span><span>now</span></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.25fr 1fr;gap:var(--gap);align-items:start">
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden">
+            <div style="display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid var(--line)"><span style="font-size:12.5px;font-weight:700;flex:1">All snapshots</span><span style="font-size:10.5px;color:var(--mute)">newest first</span></div>
+            <div style="display:grid;grid-template-columns:1.2fr 1.1fr 1fr .8fr auto;gap:12px;padding:9px 16px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:600"><span>When</span><span>Map</span><span>Trigger</span><span>Size</span><span></span></div>
+            <sc-for list="{{ backups }}" as="b" hint-placeholder-count="7">
+              <div onClick="{{ b.select }}" style="{{ b.rowStyle }}" style-hover="background:var(--surface2)">
+                <div style="min-width:0"><div style="font-weight:600;font-family:'JetBrains Mono',monospace;font-size:12px">{{ b.when }}</div><div style="font-size:10px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ b.note }}</div></div>
+                <span style="color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ b.map }}</span>
+                <span style="{{ b.pillStyle }}">{{ b.tgLabel }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;color:var(--dim)">{{ b.size }}</span>
+                <div style="display:flex;gap:5px">
+                  <button onClick="{{ b.restore }}" title="Restore this snapshot" style="width:26px;height:26px;border-radius:6px;background:var(--surface2);border:1px solid var(--line);color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:var(--ember)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12a7.5 7.5 0 1 1 2.3 5.4M4.2 20v-4.2h4.2"/></svg></button>
+                  <button onClick="{{ b.del }}" title="Delete this snapshot" style="width:26px;height:26px;border-radius:6px;background:var(--surface2);border:1px solid var(--line);color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:var(--red)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:var(--gap)">
+            <sc-if value="{{ hasBackups }}" hint-placeholder-val="{{ true }}">
+            <div style="background:linear-gradient(160deg,var(--ember-soft),var(--card));border:1px solid rgba(255,122,46,.3);border-radius:var(--radius);padding:var(--pad)">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="width:9px;height:9px;border-radius:99px;background:{{ selBkp.tgColor }};box-shadow:0 0 8px {{ selBkp.tgColor }}"></span><span style="font-size:12.5px;font-weight:700;flex:1">Rollback target</span></div>
+              <div style="font-size:16px;font-weight:800;letter-spacing:-.01em;font-family:'JetBrains Mono',monospace;word-break:break-all">{{ selBkp.when }}</div>
+              <div style="font-size:12px;color:var(--dim);margin-top:4px">{{ selBkp.map }} · {{ selBkp.size }}</div>
+              <div style="display:flex;gap:8px;margin-top:15px">
+                <button onClick="{{ selBkp.restore }}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;font-size:12.5px;font-weight:700;color:#0A0C10;background:linear-gradient(90deg,var(--ember),var(--ember2));border:none;border-radius:9px;padding:10px;cursor:pointer" style-hover="filter:brightness(1.06)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A0C10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1M3.2 4.2v3.4h3.4"/></svg>Restore this world</button>
+                <button onClick="{{ selBkp.del }}" title="Delete this snapshot" style="flex:none;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--red);background:rgba(255,91,91,.1);border:1px solid rgba(255,91,91,.28);border-radius:9px;padding:10px 13px;cursor:pointer" style-hover="background:rgba(255,91,91,.16)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>Delete</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:7px;margin-top:11px;font-size:10.5px;color:var(--dim)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.8 20h18.4z"/><path d="M12 10v4M12 17h.01"/></svg>The server is stopped, the world restored, then restarted.</div>
+            </div>
+            </sc-if>
+            <sc-if value="{{ noBackups }}" hint-placeholder-val="{{ false }}">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:26px;text-align:center">
+              <div style="font-size:13px;font-weight:700;color:var(--dim)">No snapshots yet</div>
+              <div style="font-size:11.5px;color:var(--mute);margin-top:6px;line-height:1.6">Click <span style="color:var(--ember);font-weight:600">Snapshot</span> above to save the current world. Once you have a snapshot you can roll back to it here.</div>
+            </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:22px 24px 40px;display:flex;flex-direction:column;gap:16px">
+
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:13px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Configuring</span>
+          <span style="font-size:12px;padding:5px 11px;border-radius:6px;background:var(--ember-soft);color:var(--ember);font-weight:700">{{ sel.name }}</span>
+          <div style="flex:1"></div>
+          <span style="font-size:11.5px;color:var(--mute);font-family:'JetBrains Mono',monospace">changes apply live to the server</span>
+        </div>
+
+        <div style="display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:5px;overflow-x:auto">
+          <sc-for list="{{ settingsTabs }}" as="t" hint-placeholder-count="8">
+            <button onClick="{{ t.go }}" style="{{ t.style }}">{{ t.label }}</button>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ stGeneral }}" hint-placeholder-val="{{ true }}">
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px;display:grid;grid-template-columns:1fr 1fr;gap:18px 22px">
+            <div><div style="font-size:11px;color:var(--dim);margin-bottom:6px;font-weight:600">Session name</div><div style="background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13px">{{ genSession }}</div></div>
+            <div><div style="font-size:11px;color:var(--dim);margin-bottom:6px;font-weight:600">Server map</div><div style="background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13px;font-family:'JetBrains Mono',monospace">{{ sel.map }}</div></div>
+            <div><div style="font-size:11px;color:var(--dim);margin-bottom:6px;font-weight:600">Game port · UDP</div><div style="background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13px;font-family:'JetBrains Mono',monospace">{{ genGamePort }}</div></div>
+            <div><div style="font-size:11px;color:var(--dim);margin-bottom:6px;font-weight:600">RCON port · TCP (LAN)</div><div style="background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13px;font-family:'JetBrains Mono',monospace">{{ genRconPort }}</div></div>
+            <div><div style="font-size:11px;color:var(--dim);margin-bottom:6px;font-weight:600">Admin password</div><div style="background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13px;font-family:'JetBrains Mono',monospace">•••••••• <span style="color:var(--faint);font-size:11px">· set in map.conf</span></div></div>
+            <div><div style="font-size:11px;color:var(--dim);margin-bottom:6px;font-weight:600">Max players</div><div style="background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13px;font-family:'JetBrains Mono',monospace">{{ sel.max }}</div></div>
+            <div style="grid-column:1 / -1"><div style="font-size:11px;color:var(--dim);margin-bottom:6px;font-weight:600">Status</div><div style="background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13px">{{ genStatus }}</div></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ stRates }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:start">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px">
+              <div style="display:flex;align-items:center;margin-bottom:18px"><span style="font-size:13px;font-weight:700;flex:1">Multipliers</span><span style="font-size:10.5px;color:var(--ember);display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="var(--ember)"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>event doubles boosted rates</span></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 22px">
+                <sc-for list="{{ rates }}" as="r" hint-placeholder-count="8">
+                  <div>
+                    <div style="display:flex;align-items:center;margin-bottom:8px;gap:8px"><span style="font-size:12px;color:var(--dim);flex:1">{{ r.k }}</span><input value="{{ r.v2 }}" onChange="{{ r.onChange }}" onBlur="{{ r.onBlur }}" onKeyDown="{{ r.onKey }}" style="{{ r.inputStyle }}" /><span style="font-size:12px;color:var(--mute)">×</span></div>
+                    <div style="position:relative;height:18px"><div style="{{ r.track }}"></div><div style="{{ r.fill }}"></div><div style="{{ r.knob }}"></div><input type="range" min="{{ r.sMin }}" max="{{ r.sMax }}" step="{{ r.sStep }}" value="{{ r.sVal }}" onChange="{{ r.onSlide }}" onMouseUp="{{ r.onSlideUp }}" onKeyUp="{{ r.onSlideUp }}" onBlur="{{ r.onSlideUp }}" style="{{ r.rangeStyle }}" /></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;display:flex;flex-direction:column;gap:16px">
+              <span style="font-size:13px;font-weight:700">Rules</span>
+              <div><div style="font-size:11px;color:var(--dim);margin-bottom:7px;font-weight:600">Game mode <span style="color:var(--faint)">· applies on next restart</span></div><div style="display:flex;gap:3px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:3px"><span onClick="{{ setPvE }}" style="{{ pveStyle }}">PvE</span><span onClick="{{ setPvP }}" style="{{ pvpStyle }}">PvP</span></div></div>
+              <div><div style="font-size:11px;color:var(--dim);margin-bottom:7px;font-weight:600">Difficulty · {{ diff.label }}</div><div style="position:relative;height:18px"><div style="{{ diff.track }}"></div><div style="{{ diff.fill }}"></div><div style="{{ diff.knob }}"></div><input type="range" min="{{ diff.sMin }}" max="{{ diff.sMax }}" step="{{ diff.sStep }}" value="{{ diff.val }}" onChange="{{ diff.onSlide }}" onMouseUp="{{ diff.onSlideUp }}" onKeyUp="{{ diff.onSlideUp }}" onBlur="{{ diff.onSlideUp }}" style="{{ diff.rangeStyle }}" /></div></div>
+              <div><div style="font-size:11px;color:var(--dim);margin-bottom:7px;font-weight:600">Crossplay platforms <span style="color:var(--faint)">· click to allow/block · applies on restart</span></div><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ crossPlatforms }}" as="cp" hint-placeholder-count="4"><span onClick="{{ cp.toggle }}" style="{{ cp.style }}">{{ cp.mark }}{{ cp.short }}</span></sc-for></div></div>
+              <div onClick="{{ toggleThird }}" style="display:flex;align-items:center;gap:10px;padding-top:4px;cursor:pointer"><span style="flex:1;font-size:12.5px">Third-person camera</span><span style="{{ thirdTog.track }}"><span style="{{ thirdTog.knob }}"></span></span></div>
+              <div onClick="{{ toggleFlyer }}" style="display:flex;align-items:center;gap:10px;cursor:pointer"><span style="flex:1;font-size:12.5px">Flyer carry (PvE)</span><span style="{{ flyerTog.track }}"><span style="{{ flyerTog.knob }}"></span></span></div>
+            </div>
+          </div>
+
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ember)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 7v5c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V7z"/><path d="M9.5 12h5M12 9.5v5"/></svg>
+              <div style="flex:1"><div style="font-size:13px;font-weight:700">Advanced config overrides</div><div style="font-size:11px;color:var(--mute)">Search any ASA setting, add it, and it's validated against the config schema before it's staged</div></div>
+              <sc-if value="{{ cfgCount }}" hint-placeholder-val="{{ true }}"><span style="font-size:11px;color:var(--green);font-family:'JetBrains Mono',monospace;background:rgba(55,214,122,.1);border:1px solid rgba(55,214,122,.25);border-radius:7px;padding:4px 10px">{{ cfgValidCount }} / {{ cfgCount }} valid</span></sc-if>
+            </div>
+
+            <div style="position:relative;margin-top:14px">
+              <div style="display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--line2);border-radius:10px;padding:11px 13px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--mute)" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.6-3.6"/></svg>
+                <input value="{{ cfgQuery }}" onChange="{{ onCfgSearch }}" placeholder="Search settings — e.g. “tame”, “decay”, “water drain”, “night”…" style="flex:1;background:transparent;border:none;outline:none;color:var(--text);font:inherit;font-size:13px" />
+                <span style="font-size:10px;color:var(--faint);font-family:'JetBrains Mono',monospace">{{ cfgQuery }}</span>
+              </div>
+
+              <sc-if value="{{ cfgHasQuery }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;left:0;right:0;top:52px;z-index:20;background:var(--elevated);border:1px solid var(--line2);border-radius:11px;box-shadow:0 20px 44px rgba(0,0,0,.55);overflow:hidden">
+                  <sc-for list="{{ cfgResults }}" as="c" hint-placeholder-count="4">
+                    <button onClick="{{ c.add }}" style="display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;border:none;border-bottom:1px solid rgba(33,41,54,.5);background:transparent;color:var(--text);cursor:pointer;font:inherit;text-align:left" style-hover="background:var(--surface2)">
+                      <span style="width:24px;height:24px;border-radius:6px;background:var(--ember-soft);color:var(--ember);display:flex;align-items:center;justify-content:center;flex:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+                      <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;font-family:'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.key }}</div><div style="font-size:11px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.desc }}</div></div>
+                      <span style="font-size:9.5px;color:var(--dim);border:1px solid var(--line2);border-radius:5px;padding:2px 7px;font-family:'JetBrains Mono',monospace;flex:none">{{ c.type }}</span>
+                      <span style="font-size:9.5px;color:var(--faint);flex:none">[{{ c.sec }}]</span>
+                    </button>
+                  </sc-for>
+                  <sc-if value="{{ cfgCanAddCustom }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:12px 14px;border-top:1px solid rgba(33,41,54,.5);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                      <span style="font-size:11.5px;color:var(--dim);flex:1;min-width:120px">Not in the list? Add <span style="font-family:'JetBrains Mono',monospace;color:var(--text)">{{ cfgCustomKey }}</span> as a custom setting:</span>
+                      <button onClick="{{ cfgAddCustomGus }}" style="font-size:11px;font-weight:700;color:var(--ember);background:var(--ember-soft);border:1px solid rgba(255,122,46,.3);border-radius:7px;padding:6px 11px;cursor:pointer;white-space:nowrap">+ GUS</button>
+                      <button onClick="{{ cfgAddCustomGame }}" style="font-size:11px;font-weight:700;color:var(--ember);background:var(--ember-soft);border:1px solid rgba(255,122,46,.3);border-radius:7px;padding:6px 11px;cursor:pointer;white-space:nowrap">+ Game.ini</button>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </div>
+
+            <sc-if value="{{ cfgCount }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:9px;margin-top:16px">
+                <div style="font-size:10.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Staged overrides · Apply writes to the server config</div>
+                <sc-for list="{{ cfgAdded }}" as="a" hint-placeholder-count="0">
+                  <div style="display:flex;align-items:center;gap:13px;background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:12px 14px">
+                    <div style="min-width:0;flex:1">
+                      <div style="font-size:12.5px;font-weight:600;font-family:'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.key }}</div>
+                      <div style="font-size:10.5px;color:var(--mute);margin-top:2px">[{{ a.sec }}] · {{ a.desc }}</div>
+                    </div>
+                    <span style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace;flex:none">=</span>
+                    <input value="{{ a.value }}" onChange="{{ a.onEdit }}" style="{{ a.inputStyle }}" />
+                    <span style="{{ a.badgeStyle }}">
+                      <sc-if value="{{ a.checking }}" hint-placeholder-val="{{ true }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="animation:spin .8s linear infinite"><path d="M12 3a9 9 0 1 0 9 9" opacity=".9"/></svg>Checking</sc-if>
+                      <sc-if value="{{ a.valid }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg>Valid</sc-if>
+                      <sc-if value="{{ a.invalid }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5M12 16.5h.01"/><circle cx="12" cy="12" r="9"/></svg>Invalid</sc-if>
+                    </span>
+                    <span style="font-size:10.5px;color:{{ a.statusColor }};flex:none;width:190px">{{ a.msg }}</span>
+                    <button onClick="{{ a.apply }}" style="font-size:11px;font-weight:700;color:#0A0C10;background:var(--green);border:none;border-radius:7px;padding:6px 12px;cursor:pointer;flex:none" style-hover="filter:brightness(1.06)">Apply</button>
+                    <button onClick="{{ a.remove }}" style="width:26px;height:26px;border-radius:6px;background:var(--surface2);border:1px solid var(--line);color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none" style-hover="color:var(--red)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 6 18 18M18 6 6 18"/></svg></button>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+
+          </div>
+        </sc-if>
+
+
+
+        <sc-if value="{{ stFiles }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px">
+              <div style="font-size:10.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:4px 8px 10px">{{ sel.name }} · config</div>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <sc-for list="{{ files }}" as="f" hint-placeholder-count="5">
+                  <div style="{{ f.style }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.name }}</span><span style="font-size:10px;color:var(--faint)">{{ f.size }}</span></div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="background:#07090C;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column">
+              <div style="display:flex;align-items:center;gap:10px;padding:11px 15px;border-bottom:1px solid var(--line);background:var(--card)">
+                <span style="font-size:12px;font-family:'JetBrains Mono',monospace;font-weight:600;flex:1">{{ cfgFileName }}</span>
+                <sc-if value="{{ cfgIsEmpty }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;color:var(--amber)">empty — type settings below</span></sc-if>
+                <button onClick="{{ saveCfgRaw }}" style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:#0A0C10;background:var(--green);border:none;border-radius:7px;padding:6px 13px;cursor:pointer" style-hover="filter:brightness(1.06)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0A0C10" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7"/></svg>Save file</button>
+              </div>
+              <textarea value="{{ cfgDraft }}" onChange="{{ onCfgDraft }}" spellcheck="false" placeholder="[ServerSettings]&#10;KeyName=Value" style="width:100%;min-height:440px;resize:vertical;background:#07090C;border:none;outline:none;color:#C7D3E3;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.75;padding:14px 16px"></textarea>
+              <div style="padding:9px 16px;border-top:1px solid var(--line);font-size:10.5px;color:var(--faint);line-height:1.5">Passwords shown as •••••• stay unchanged when you save. Most changes apply on the next server restart.</div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ stSchedule }}" hint-placeholder-val="{{ true }}">
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden">
+            <div style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)"><span style="font-size:12.5px;font-weight:700;flex:1">Scheduled tasks</span><button onClick="{{ openNewTask }}" style="font-size:12px;font-weight:600;color:var(--ember);background:var(--ember-soft);border:1px solid rgba(255,122,46,.3);border-radius:8px;padding:7px 13px;cursor:pointer" style-hover="filter:brightness(1.06)">+ New task</button></div>
+            <sc-for list="{{ schedule }}" as="t" hint-placeholder-count="3">
+              <div style="display:grid;grid-template-columns:auto 1fr auto;gap:14px;padding:13px 16px;border-bottom:1px solid rgba(33,41,54,.5);align-items:center">
+                <div style="width:34px;height:34px;border-radius:9px;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex:none">{{ t.icon }}</div>
+                <div style="min-width:0"><div style="font-size:13px;font-weight:600">{{ t.name }}</div><div style="font-size:11px;color:var(--dim)">{{ t.human }} · <span style="color:var(--mute)">{{ t.target }}</span></div></div>
+                <button onClick="{{ t.del }}" title="Remove task" style="width:30px;height:30px;border-radius:7px;background:var(--surface2);border:1px solid var(--line2);color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none" style-hover="color:var(--red)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6 18 18M18 6 6 18"/></svg></button>
+              </div>
+            </sc-for>
+            <div style="padding:11px 16px;font-size:11px;color:var(--faint)">Tasks run via arkadmin's crontab on the server.</div>
+          </div>
+        </sc-if>
+
+
+        <sc-if value="{{ stAudit }}" hint-placeholder-val="{{ true }}">
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden">
+            <div style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)"><span style="font-size:12.5px;font-weight:700;flex:1">Admin audit log</span><button onClick="{{ exportAudit }}" style="font-size:11.5px;font-weight:600;color:var(--dim);background:var(--surface2);border:1px solid var(--line2);border-radius:8px;padding:7px 12px;cursor:pointer" style-hover="color:var(--text)">Export CSV</button></div>
+            <div style="display:grid;grid-template-columns:auto 2fr 1.2fr auto;gap:14px;padding:10px 16px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:600"><span>Actor</span><span>Command</span><span>Target</span><span>When</span></div>
+            <sc-for list="{{ audit }}" as="a" hint-placeholder-count="7">
+              <div style="display:grid;grid-template-columns:auto 2fr 1.2fr auto;gap:14px;padding:12px 16px;border-bottom:1px solid rgba(33,41,54,.5);align-items:center">
+                <span style="font-size:9.5px;font-weight:700;text-transform:uppercase;padding:2px 7px;border-radius:5px;color:{{ a.whoColor }};background:{{ a.whoBg }};justify-self:start">{{ a.who }}</span>
+                <span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:{{ a.cmdColor }};min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.cmd }}</span>
+                <span style="font-size:11.5px;color:var(--dim)">{{ a.target }}</span>
+                <span style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace">{{ a.ago }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+      </div>
+      </sc-if>
+
+
+
+    </main>
+  </div>
+
+  <sc-if value="{{ paletteOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closePalette }}" style="position:fixed;inset:0;background:rgba(5,7,10,.62);backdrop-filter:blur(7px);z-index:80;display:flex;align-items:flex-start;justify-content:center;padding-top:13vh">
+      <div onClick="{{ stopClick }}" style="width:580px;max-width:92vw;background:var(--surface);border:1px solid var(--line2);border-radius:16px;box-shadow:0 40px 100px rgba(0,0,0,.65);overflow:hidden;animation:rise .18s ease both">
+        <div style="display:flex;align-items:center;gap:11px;padding:15px 18px;border-bottom:1px solid var(--line)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ember)" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.6-3.6"/></svg>
+          <span style="flex:1;font-size:14px;color:var(--mute)">Type a command or search players, files, maps…<span style="display:inline-block;width:8px;height:15px;background:var(--ember);margin-left:4px;vertical-align:middle;animation:blink 1s step-end infinite"></span></span>
+          <span style="font-size:9.5px;color:var(--mute);border:1px solid var(--line2);border-radius:5px;padding:2px 6px;font-family:'JetBrains Mono',monospace">esc</span>
+        </div>
+        <div style="max-height:46vh;overflow:auto;padding:8px">
+          <sc-for list="{{ paletteItems }}" as="p" hint-placeholder-count="12">
+            <sc-if value="{{ p.isHeader }}" hint-placeholder-val="{{ false }}"><div style="font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:700;padding:10px 12px 5px">{{ p.label }}</div></sc-if>
+            <sc-if value="{{ p.isItem }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ p.go }}" style="display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border-radius:9px;border:none;background:transparent;color:var(--text);cursor:pointer;font:inherit;font-size:13px;text-align:left" style-hover="background:var(--surface2)">
+                <span style="color:var(--dim);display:flex">{{ p.icon }}</span>
+                <span style="flex:1">{{ p.label }}</span>
+                <span style="font-size:9.5px;color:var(--mute);border:1px solid var(--line);border-radius:5px;padding:2px 7px;font-family:'JetBrains Mono',monospace">{{ p.meta }}</span>
+              </button>
+            </sc-if>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:14px;padding:10px 18px;border-top:1px solid var(--line);font-size:10px;color:var(--mute);font-family:'JetBrains Mono',monospace"><span>↑↓ navigate</span><span>↵ run</span><span>esc close</span><span style="flex:1;text-align:right;color:var(--faint)">⌘K anywhere</span></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ addMapOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ addMap.close }}" style="position:fixed;inset:0;background:rgba(5,7,10,.66);backdrop-filter:blur(7px);z-index:86;display:flex;align-items:center;justify-content:center;padding:24px">
+      <div onClick="{{ addMap.stop }}" style="width:560px;max-width:100%;max-height:88vh;overflow:auto;background:var(--surface);border:1px solid var(--line2);border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,.6)">
+        <div style="display:flex;align-items:center;gap:13px;padding:18px 20px;border-bottom:1px solid var(--line)">
+          <span style="width:34px;height:34px;border-radius:9px;background:var(--ember-soft);color:var(--ember);display:flex;align-items:center;justify-content:center;flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+          <div style="flex:1"><div style="font-size:15px;font-weight:800">Add a new map</div><div style="font-size:11.5px;color:var(--mute);font-family:'JetBrains Mono',monospace">creates map.conf + systemd service · shared binaries</div></div>
+          <button onClick="{{ addMap.close }}" style="width:30px;height:30px;border-radius:8px;background:var(--surface2);border:1px solid var(--line);color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:var(--text)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 6 18 18M18 6 6 18"/></svg></button>
+        </div>
+        <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
+          <div>
+            <div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:8px">Map</div>
+            <div style="display:flex;flex-wrap:wrap;gap:7px">
+              <sc-for list="{{ addMap.available }}" as="m" hint-placeholder-count="6">
+                <button onClick="{{ m.select }}" style="{{ m.style }}">{{ m.display }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">Session name</div><input value="{{ addMap.form.sessionName }}" onChange="{{ addMap.setSession }}" placeholder="Haven - TheIsland" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font:inherit;font-size:12.5px;outline:none" /></div>
+            <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">Max players</div><input value="{{ addMap.form.maxPlayers }}" onChange="{{ addMap.setMax }}" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none" /></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+            <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">Game port</div><input value="{{ addMap.form.gamePort }}" onChange="{{ addMap.setGame }}" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none" /></div>
+            <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">Query port</div><input value="{{ addMap.form.queryPort }}" onChange="{{ addMap.setQuery }}" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none" /></div>
+            <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">RCON port</div><input value="{{ addMap.form.rconPort }}" onChange="{{ addMap.setRcon }}" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none" /></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">Admin password</div><input value="{{ addMap.form.adminPassword }}" onChange="{{ addMap.setAdmin }}" placeholder="required" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none" /></div>
+            <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">Server password <span style="color:var(--faint)">(optional)</span></div><input value="{{ addMap.form.serverPassword }}" onChange="{{ addMap.setServer }}" placeholder="empty = public" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none" /></div>
+          </div>
+          <sc-if value="{{ addMap.hasError }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:12px;color:var(--red);background:rgba(255,91,91,.1);border:1px solid rgba(255,91,91,.3);border-radius:8px;padding:9px 12px">{{ addMap.error }}</div>
+          </sc-if>
+          <div style="display:flex;gap:10px;padding-top:2px">
+            <button onClick="{{ addMap.submit }}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:700;color:#0A0C10;background:linear-gradient(90deg,var(--ember),var(--ember2));border:none;border-radius:10px;padding:11px;cursor:pointer">Create map</button>
+            <button onClick="{{ addMap.close }}" style="font-size:13px;font-weight:600;color:var(--dim);background:var(--surface2);border:1px solid var(--line2);border-radius:10px;padding:11px 16px;cursor:pointer">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ newTaskOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ newTask.close }}" style="position:fixed;inset:0;background:rgba(5,7,10,.66);backdrop-filter:blur(7px);z-index:86;display:flex;align-items:center;justify-content:center;padding:24px">
+      <div onClick="{{ newTask.stop }}" style="width:480px;max-width:100%;background:var(--surface);border:1px solid var(--line2);border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,.6)">
+        <div style="display:flex;align-items:center;gap:13px;padding:18px 20px;border-bottom:1px solid var(--line)">
+          <div style="flex:1"><div style="font-size:15px;font-weight:800">New scheduled task</div><div style="font-size:11.5px;color:var(--mute);font-family:'JetBrains Mono',monospace">added to the server's crontab</div></div>
+          <button onClick="{{ newTask.close }}" style="width:30px;height:30px;border-radius:8px;background:var(--surface2);border:1px solid var(--line);color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:var(--text)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 6 18 18M18 6 6 18"/></svg></button>
+        </div>
+        <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
+          <div>
+            <div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:8px">What should it do?</div>
+            <div style="display:flex;flex-wrap:wrap;gap:7px">
+              <sc-for list="{{ newTask.types }}" as="ty" hint-placeholder-count="3"><button onClick="{{ ty.select }}" style="{{ ty.style }}">{{ ty.label }}</button></sc-for>
+            </div>
+          </div>
+          <sc-if value="{{ newTask.isMultiplier }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:8px">Add rates to this event — each at its own value (e.g. XP ×6 <span style="color:var(--faint)">and</span> Taming ×20)</div>
+              <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px">
+                <sc-for list="{{ newTask.ratePresets }}" as="rt" hint-placeholder-count="6"><button onClick="{{ rt.add }}" style="{{ rt.style }}">+ {{ rt.label }}</button></sc-for>
+              </div>
+              <div style="font-size:10.5px;color:var(--faint);margin-bottom:6px;line-height:1.4">Not one of the buttons above? Type any ARK setting name and press <span style="color:var(--ember);font-weight:600">Add</span> — the file is chosen automatically for known settings.</div>
+              <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+                <input value="{{ newTask.rateKeyValue }}" onChange="{{ newTask.setRateKey }}" placeholder="e.g. HarvestAmountMultiplier" style="flex:1;min-width:150px;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none" />
+                <span style="font-size:10.5px;color:var(--mute);white-space:nowrap">file:</span>
+                <button onClick="{{ newTask.setRateFileGus }}" title="GameUserSettings.ini — most settings live here" style="{{ newTask.gusStyle }}">GUS</button>
+                <button onClick="{{ newTask.setRateFileGame }}" title="Game.ini — breeding & dino-stat settings" style="{{ newTask.gameStyle }}">Game</button>
+                <button onClick="{{ newTask.addFromInput }}" style="font-size:12px;font-weight:700;color:#0A0C10;background:var(--ember);border:none;border-radius:8px;padding:8px 15px;cursor:pointer;white-space:nowrap">Add</button>
+              </div>
+              <sc-if value="{{ newTask.hasRates }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px">
+                  <sc-for list="{{ newTask.rateList }}" as="r" hint-placeholder-count="2">
+                    <div style="display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:8px 11px">
+                      <span style="flex:1;min-width:0;font-size:12px;font-family:'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.key }}</span>
+                      <span style="font-size:9.5px;color:var(--faint);border:1px solid var(--line2);border-radius:5px;padding:1px 6px;font-family:'JetBrains Mono',monospace">{{ r.file }}</span>
+                      <input value="{{ r.value }}" onChange="{{ r.setValue }}" style="{{ r.valInputStyle }}" /><span style="font-size:12px;color:var(--mute)">×</span>
+                      <button onClick="{{ r.remove }}" title="Remove" style="width:24px;height:24px;border-radius:6px;background:var(--surface2);border:1px solid var(--line);color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:var(--red)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6 18 18M18 6 6 18"/></svg></button>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <div style="display:flex;align-items:center;gap:14px">
+                <div onClick="{{ newTask.toggleRestart }}" style="display:flex;align-items:center;gap:9px;cursor:pointer"><span style="{{ newTask.restartTog.track }}"><span style="{{ newTask.restartTog.knob }}"></span></span><span style="font-size:11.5px;color:var(--dim);white-space:nowrap">restart to apply</span></div>
+                <div style="flex:1"></div>
+                <button onClick="{{ newTask.testNow }}" style="display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:600;color:var(--cyan);background:var(--cyan-soft);border:1px solid rgba(55,211,195,.3);border-radius:8px;padding:8px 12px;cursor:pointer" style-hover="filter:brightness(1.1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9z"/></svg>Test now</button>
+              </div>
+            </div>
+          </sc-if>
+          <div>
+            <div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:8px">{{ newTask.whenLabel }}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px">
+              <sc-for list="{{ newTask.startDays }}" as="d" hint-placeholder-count="8"><button onClick="{{ d.select }}" style="{{ d.style }}">{{ d.label }}</button></sc-for>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px"><input type="time" value="{{ newTask.startTime }}" onChange="{{ newTask.setStartTime }}" style="background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:8px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none;color-scheme:dark" /><span style="font-size:11px;color:var(--mute)">{{ newTask.startHuman }}</span></div>
+          </div>
+          <sc-if value="{{ newTask.isMultiplier }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:8px">Event ends · rates go back to normal</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px">
+                <sc-for list="{{ newTask.endDays }}" as="d" hint-placeholder-count="8"><button onClick="{{ d.select }}" style="{{ d.style }}">{{ d.label }}</button></sc-for>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px"><input type="time" value="{{ newTask.endTime }}" onChange="{{ newTask.setEndTime }}" style="background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:8px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none;color-scheme:dark" /><span style="font-size:11px;color:var(--mute)">{{ newTask.endHuman }}</span></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ newTask.showMessage }}" hint-placeholder-val="{{ false }}">
+            <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:8px">Broadcast message to players</div><input value="{{ newTask.message }}" onChange="{{ newTask.setMessage }}" placeholder="e.g. ⚡ Double XP weekend has started!" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-size:12.5px;outline:none" /></div>
+          </sc-if>
+          <sc-if value="{{ newTask.hasError }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:var(--red);background:rgba(255,91,91,.1);border:1px solid rgba(255,91,91,.3);border-radius:8px;padding:9px 12px">{{ newTask.error }}</div></sc-if>
+          <div style="display:flex;gap:10px">
+            <button onClick="{{ newTask.submit }}" style="flex:1;font-size:13px;font-weight:700;color:#0A0C10;background:linear-gradient(90deg,var(--ember),var(--ember2));border:none;border-radius:10px;padding:11px;cursor:pointer">Add task</button>
+            <button onClick="{{ newTask.close }}" style="font-size:13px;font-weight:600;color:var(--dim);background:var(--surface2);border:1px solid var(--line2);border-radius:10px;padding:11px 16px;cursor:pointer">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ editWorldOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ editWorld.close }}" style="position:fixed;inset:0;background:rgba(5,7,10,.66);backdrop-filter:blur(7px);z-index:87;display:flex;align-items:center;justify-content:center;padding:24px">
+      <div onClick="{{ editWorld.stop }}" style="width:440px;max-width:100%;background:var(--surface);border:1px solid var(--line2);border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,.6)">
+        <div style="display:flex;align-items:center;gap:13px;padding:18px 20px;border-bottom:1px solid var(--line)">
+          <div style="flex:1"><div style="font-size:15px;font-weight:800">Edit world · {{ editWorld.name }}</div><div style="font-size:11.5px;color:var(--mute);font-family:'JetBrains Mono',monospace">name + passwords · applies on restart</div></div>
+          <button onClick="{{ editWorld.close }}" style="width:30px;height:30px;border-radius:8px;background:var(--surface2);border:1px solid var(--line);color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:var(--text)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 6 18 18M18 6 6 18"/></svg></button>
+        </div>
+        <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
+          <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">Session name <span style="color:var(--faint)">· how the server shows in the list</span></div><input value="{{ editWorld.form.sessionName }}" onChange="{{ editWorld.setSession }}" placeholder="e.g. Haven - Extinction" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-size:12.5px;outline:none" /></div>
+          <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">Admin password <span style="color:var(--faint)">· leave blank to keep current</span></div><input value="{{ editWorld.form.adminPassword }}" onChange="{{ editWorld.setAdmin }}" placeholder="new admin password" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none" /></div>
+          <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">Join password <span style="color:var(--faint)">· leave blank to keep current</span></div><input value="{{ editWorld.form.serverPassword }}" onChange="{{ editWorld.setServer }}" placeholder="server join password (optional)" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none" /></div>
+          <sc-if value="{{ editWorld.hasError }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:var(--red);background:rgba(255,91,91,.1);border:1px solid rgba(255,91,91,.3);border-radius:8px;padding:9px 12px">{{ editWorld.error }}</div></sc-if>
+          <div style="display:flex;gap:10px">
+            <button onClick="{{ editWorld.submit }}" style="flex:1;font-size:13px;font-weight:700;color:#0A0C10;background:linear-gradient(90deg,var(--ember),var(--ember2));border:none;border-radius:10px;padding:11px;cursor:pointer">Save changes</button>
+            <button onClick="{{ editWorld.close }}" style="font-size:13px;font-weight:600;color:var(--dim);background:var(--surface2);border:1px solid var(--line2);border-radius:10px;padding:11px 16px;cursor:pointer">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ confirmDeleteOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ confirmDelete.close }}" style="position:fixed;inset:0;background:rgba(5,7,10,.7);backdrop-filter:blur(7px);z-index:90;display:flex;align-items:center;justify-content:center;padding:24px">
+      <div onClick="{{ confirmDelete.stop }}" style="width:420px;max-width:100%;background:var(--surface);border:1px solid rgba(255,91,91,.3);border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,.65);overflow:hidden">
+        <div style="display:flex;align-items:center;gap:13px;padding:18px 20px;border-bottom:1px solid var(--line)">
+          <div style="width:38px;height:38px;border-radius:10px;background:rgba(255,91,91,.14);display:flex;align-items:center;justify-content:center;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.8 20h18.4z"/><path d="M12 10v4M12 17h.01"/></svg></div>
+          <div style="flex:1;font-size:15px;font-weight:800">{{ confirmDelete.title }}</div>
+        </div>
+        <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
+          <div style="font-size:12.5px;color:var(--dim);line-height:1.6">{{ confirmDelete.body }}</div>
+          <sc-if value="{{ confirmDelete.hasError }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:var(--red);background:rgba(255,91,91,.1);border:1px solid rgba(255,91,91,.3);border-radius:8px;padding:9px 12px">{{ confirmDelete.error }}</div></sc-if>
+          <div style="display:flex;gap:10px">
+            <button onClick="{{ confirmDelete.confirm }}" style="flex:1;font-size:13px;font-weight:700;color:#0A0C10;background:var(--red);border:none;border-radius:10px;padding:11px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ confirmDelete.confirmLabel }}</button>
+            <button onClick="{{ confirmDelete.close }}" style="font-size:13px;font-weight:600;color:var(--dim);background:var(--surface2);border:1px solid var(--line2);border-radius:10px;padding:11px 16px;cursor:pointer">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ upd }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeUpdate }}" style="position:fixed;inset:0;background:rgba(5,7,10,.66);backdrop-filter:blur(7px);z-index:85;display:flex;align-items:center;justify-content:center;padding:24px">
+      <div onClick="{{ stopClick2 }}" style="width:540px;max-width:94vw;background:var(--surface);border:1px solid var(--line2);border-radius:18px;box-shadow:0 40px 100px rgba(0,0,0,.65);overflow:hidden;animation:rise .2s ease both">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line)">
+          <div style="width:38px;height:38px;border-radius:10px;background:rgba(90,169,255,.14);display:flex;align-items:center;justify-content:center;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg></div>
+          <div style="flex:1"><div style="font-size:15px;font-weight:800">Server update · {{ upd.instName }}</div><div style="font-size:11.5px;color:var(--mute);font-family:'JetBrains Mono',monospace">SteamCMD · app 2430930</div></div>
+          <button onClick="{{ closeUpdate }}" style="width:30px;height:30px;border-radius:8px;background:var(--surface2);border:1px solid var(--line);color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:var(--text)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 6 18 18M18 6 6 18"/></svg></button>
+        </div>
+
+        <div style="padding:20px">
+          <sc-if value="{{ upd.isChecking }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;align-items:center;gap:12px;padding:18px 4px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.4" stroke-linecap="round" style="animation:spin .8s linear infinite"><path d="M12 3a9 9 0 1 0 9 9" opacity=".9"/></svg><span style="font-size:13.5px;color:var(--dim)">Querying SteamCMD for the latest build…</span></div>
+          </sc-if>
+
+          <sc-if value="{{ upd.isReady }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <div style="display:flex;align-items:center;gap:16px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:15px 17px">
+                <div style="text-align:center"><div style="font-size:10px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em">Installed</div><div style="font-size:18px;font-weight:800;font-family:'JetBrains Mono',monospace;margin-top:2px">v{{ bldCur }}</div><div style="font-size:9.5px;color:var(--faint);font-family:'JetBrains Mono',monospace">build {{ bldCurB }}</div></div>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12h14m0 0-5-5m5 5-5 5"/></svg>
+                <div style="text-align:center"><div style="font-size:10px;color:var(--blue);text-transform:uppercase;letter-spacing:.06em">Available</div><div style="font-size:18px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--blue);margin-top:2px">v{{ bldNext }}</div><div style="font-size:9.5px;color:var(--faint);font-family:'JetBrains Mono',monospace">build {{ bldNextB }}</div></div>
+                <div style="flex:1;text-align:right"><div style="font-size:10px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em">Download</div><div style="font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-top:2px">{{ bldSize }}</div></div>
+              </div>
+
+              <div style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin:16px 0 10px">Patch notes · v{{ bldNext }}</div>
+              <div style="display:flex;flex-direction:column;gap:9px;max-height:150px;overflow:auto">
+                <sc-for list="{{ updNotes }}" as="n" hint-placeholder-count="5">
+                  <div style="display:flex;gap:9px;align-items:flex-start"><span style="font-size:9px;font-weight:700;color:{{ n.color }};border:1px solid {{ n.color }};border-radius:5px;padding:1px 5px;flex:none;font-family:'JetBrains Mono',monospace;min-width:34px;text-align:center">{{ n.label }}</span><span style="font-size:12px;color:var(--dim);line-height:1.5">{{ n.txt }}</span></div>
+                </sc-for>
+              </div>
+
+              <div style="display:flex;align-items:center;gap:8px;margin-top:15px;padding:9px 12px;background:rgba(255,178,62,.08);border:1px solid rgba(255,178,62,.22);border-radius:9px;font-size:11.5px;color:var(--amber)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.8 20h18.4z"/><path d="M12 10v4M12 17h.01"/></svg>Players get a 60s warning, world is saved, then the instance restarts.</div>
+
+              <div style="display:flex;gap:9px;margin-top:16px">
+                <button onClick="{{ applyUpdate }}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:700;color:#0A0C10;background:linear-gradient(90deg,var(--blue),#8FC4FF);border:none;border-radius:10px;padding:11px;cursor:pointer" style-hover="filter:brightness(1.06)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A0C10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg>Apply update &amp; restart</button>
+                <button onClick="{{ closeUpdate }}" style="font-size:13px;font-weight:600;color:var(--dim);background:var(--surface2);border:1px solid var(--line2);border-radius:10px;padding:11px 16px;cursor:pointer">Later</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ upd.showProgress }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:9px"><span style="font-size:13.5px;font-weight:700">{{ upd.phaseLabel }}</span><span style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--blue)">{{ upd.pct }}%</span></div>
+              <div style="height:8px;border-radius:99px;background:var(--line);overflow:hidden"><div style="{{ upd.barStyle }}"></div></div>
+              <sc-if value="{{ upd.isDownloading }}" hint-placeholder-val="{{ false }}"><div style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace;margin-top:7px">SteamCMD · {{ upd.dl }}% of {{ bldSize }} · ~48 MB/s</div></sc-if>
+              <div style="display:flex;flex-direction:column;gap:11px;margin-top:18px">
+                <sc-for list="{{ upd.steps }}" as="st" hint-placeholder-count="6">
+                  <div style="display:flex;align-items:center;gap:11px">
+                    <span style="{{ st.dotStyle }}"><sc-if value="{{ st.done }}" hint-placeholder-val="{{ true }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0A0C10" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg></sc-if></span>
+                    <span style="font-size:12.5px;color:{{ st.txtColor }}">{{ st.label }}</span>
+                    <sc-if value="{{ st.active }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.4" stroke-linecap="round" style="animation:spin .8s linear infinite"><path d="M12 3a9 9 0 1 0 9 9" opacity=".9"/></svg></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ upd.isDone }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ closeUpdate }}" style="width:100%;margin-top:18px;font-size:13px;font-weight:700;color:#0A0C10;background:var(--green);border:none;border-radius:10px;padding:11px;cursor:pointer">Done · now on v{{ bldNext }}</button>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <div style="position:fixed;right:20px;bottom:20px;z-index:90;display:flex;flex-direction:column;gap:10px;pointer-events:none">
+    <sc-for list="{{ toasts }}" as="t" hint-placeholder-count="0">
+      <div style="display:flex;align-items:center;gap:10px;background:var(--elevated);border:1px solid var(--line2);border-radius:11px;padding:11px 15px;box-shadow:0 14px 34px rgba(0,0,0,.5);animation:rise .25s ease both;min-width:230px">
+        <span style="{{ t.dot }}"></span>
+        <span style="font-size:12.5px;font-weight:600">{{ t.msg }}</span>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
