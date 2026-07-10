@@ -282,7 +282,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
             <span style="font-size:12px;font-family:'JetBrains Mono',monospace">{{ sel.dayTime }}</span>
           </div>
           </div>
-          <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;justify-content:flex-end">
+          <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
             <sc-if value="{{ selUpdAvail }}" hint-placeholder-val="{{ true }}">
               <button onClick="{{ openUpdate }}" style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:#0A0C10;background:linear-gradient(90deg,var(--blue),#8FC4FF);border:none;border-radius:9px;padding:9px 14px;cursor:pointer;box-shadow:0 0 0 0 rgba(90,169,255,.5);animation:ring 2.4s infinite" style-hover="filter:brightness(1.06)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A0C10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>Update · v{{ selUpdVer }}</button>
             </sc-if>
