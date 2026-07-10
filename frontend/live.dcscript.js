@@ -821,7 +821,7 @@ class Component extends DCLogic {
           rangeStyle:{position:'absolute',left:'0',top:'0',width:'100%',height:'18px',margin:'0',opacity:'0',cursor:'pointer',WebkitAppearance:'none',appearance:'none'}});
         const capped=inst.coresAlloc!=null||inst.ramLimitGB!=null;
         return {vmCores, vmRam,
-          capped, summary: capped?((Math.round(svC*100)/100)+' vCPU · '+svR+' GB'):'Full VM',
+          capped,
           coresLabel:(Math.round(curC*100)/100)+' vCPU', ramLabel:curR+' GB',
           cpuShare:Math.round(curC/vmCores*100)+'% of '+vmCores+' vCPU', ramShare:Math.round(curR/vmRam*100)+'% of '+vmRam+' GB',
           liveLabel: liveGB!=null?(' · using '+liveGB+' GB now'):'',
