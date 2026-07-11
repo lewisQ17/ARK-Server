@@ -268,6 +268,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
 
         <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px 24px;display:flex;flex-direction:column;gap:18px">
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <div style="flex:1;min-width:0"></div>
             <div style="{{ sel.emblemStyle }}">{{ sel.icon }}</div>
             <div style="min-width:0;margin-right:4px">
               <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px;font-weight:800;letter-spacing:-.02em">{{ sel.name }}</span><span style="{{ sel.pillStyle }}"><span style="{{ sel.dotStyle }}"></span>{{ sel.statusLabel }}</span></div>
@@ -281,7 +282,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/></svg>
               <span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--dim);white-space:nowrap">{{ sel.dayTime }}</span>
             </div>
-            <div style="flex:1;min-width:20px"></div>
+            <div style="flex:8;min-width:24px"></div>
             <div style="display:flex;align-items:center;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:99px;padding:4px 10px;flex:none">
               <sc-for list="{{ sel.telemetry }}" as="t" hint-placeholder-count="4">
                 <div style="display:flex;flex-direction:column;gap:2px;padding:2px 16px;flex:none">
@@ -290,8 +291,10 @@ html,body{margin:0;padding:0;background:#0A0C10}
                 </div>
               </sc-for>
             </div>
+            <div style="flex:1;min-width:0"></div>
           </div>
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;width:100%">
+            <div style="flex:1;min-width:0"></div>
             <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center">
             <button onClick="{{ doRestart }}" style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--amber);background:rgba(255,178,62,.1);border:1px solid rgba(255,178,62,.28);border-radius:9px;padding:9px 13px;cursor:pointer" style-hover="background:rgba(255,178,62,.16)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12a7.5 7.5 0 1 1 2.3 5.4M4.2 20v-4.2h4.2"/></svg>Restart</button>
             <button onClick="{{ doStop }}" style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#0A0C10;background:var(--red);border:none;border-radius:9px;padding:9px 14px;cursor:pointer" style-hover="filter:brightness(1.08)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A0C10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/></svg>Stop</button>
@@ -330,7 +333,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
             </div>
             <button onClick="{{ openEditWorld }}" title="Edit world" style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex:none;color:var(--dim);background:var(--surface2);border:1px solid var(--line2);border-radius:9px;padding:0;cursor:pointer" style-hover="color:var(--text);border-color:var(--line2)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/></svg></button>
             </div>
-            <div style="flex:1;min-width:20px"></div>
+            <div style="flex:8;min-width:24px"></div>
             <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;justify-content:flex-end">
               <sc-if value="{{ selUpdAvail }}" hint-placeholder-val="{{ true }}">
                 <button onClick="{{ openUpdate }}" style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:#0A0C10;background:linear-gradient(90deg,var(--blue),#8FC4FF);border:none;border-radius:9px;padding:9px 14px;cursor:pointer;box-shadow:0 0 0 0 rgba(90,169,255,.5);animation:ring 2.4s infinite" style-hover="filter:brightness(1.06)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A0C10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>Update · v{{ selUpdVer }}</button>
@@ -339,6 +342,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
               <button onClick="{{ macroSave }}" style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--text);background:var(--surface2);border:1px solid var(--line2);border-radius:9px;padding:9px 13px;cursor:pointer" style-hover="border-color:var(--line2);color:var(--ember)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7"/></svg>Save world</button>
               <button onClick="{{ delSelWorld }}" title="Delete this world" style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex:none;color:var(--red);background:rgba(255,91,91,.1);border:1px solid rgba(255,91,91,.28);border-radius:9px;padding:0;cursor:pointer" style-hover="background:rgba(255,91,91,.16)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></button>
             </div>
+            <div style="flex:1;min-width:0"></div>
           </div>
         </div>
 
