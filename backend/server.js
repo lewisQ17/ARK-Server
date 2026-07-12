@@ -141,7 +141,12 @@ async function refresh() {
         coresAlloc: rsc && rsc.cores != null ? rsc.cores : null,
         ramLimitGB: rsc && rsc.ramGB != null ? rsc.ramGB : null,
         ramLiveGB: rsc && rsc.ramUsedGB != null ? rsc.ramUsedGB : null,
+        leakGuard: {
+          enabled: config.leakGuard.enabled, ramGB: config.leakGuard.ramGB,
+          lastTs: (guardState[id] && guardState[id].lastRestartTs) || null,
+        },
       };
+      await leakGuardCheck(id, ark, st, players, svcUptimeS, rsc && rsc.ramUsedGB != null ? rsc.ramUsedGB : null);
     }
     if (anyFeed) cache.feed = anyFeed;
     cache.connected = true; cache.error = null; cache.updatedAt = Date.now();
@@ -153,6 +158,29 @@ async function refresh() {
 
 const EMBLEMS = ['#FF7A2E', '#37D67A', '#FFB23E', '#8C7BF7', '#37D3C3', '#5AA9FF', '#FF5B5B'];
 function emblemFor(name) { let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) & 0xffff; return EMBLEMS[h % EMBLEMS.length]; }
+
+// ---- leak-guard: ASA leaks memory over uptime. When a world's RAM crosses the ceiling
+// and NOBODY is online, save the world and restart just that service. Never touches a
+// world with players; cooldown + min-uptime stop restart loops. Visible in audit + feed.
+const guardState = {};   // id -> { lastRestartTs }
+async function leakGuardCheck(id, ark, st, players, svcUptimeS, ramLiveGB) {
+  const g = config.leakGuard;
+  if (!g.enabled || st.dash !== 'running') return;
+  if (ramLiveGB == null || ramLiveGB < g.ramGB) return;
+  if ((players || []).length > 0) return;
+  if (!svcUptimeS || svcUptimeS < g.minUptimeH * 3600) return;
+  const last = (guardState[id] && guardState[id].lastRestartTs) || 0;
+  if (Date.now() - last < g.cooldownH * 3600e3) return;
+  guardState[id] = { lastRestartTs: Date.now() };
+  try {
+    logAudit('leak-guard', `auto save+restart — RAM ${ramLiveGB} GB ≥ ${g.ramGB} GB, 0 players, up ${uptimeStr(svcUptimeS)}`, ark.name, true);
+    await ark.rcon('SaveWorld').catch(() => {});
+    await ark.serviceAction('restart');
+    if (cache._rsc) cache._rsc[id] = undefined;   // force fresh RAM reading next discover
+    cache.feed = [{ who: 'Leak-guard', action: `saved the world + restarted (RAM ${ramLiveGB} GB, no players online)`, map: ark.name, type: 'sys' }]
+      .concat(cache.feed || []).slice(0, 8);
+  } catch (e) { console.error('[leak-guard]', e.message); }
+}
 
 syncMaps().then(refresh);
 setInterval(refresh, config.pollIntervalMs);
@@ -169,6 +197,7 @@ app.get('/api/state', (_req, res) => {
     ramLimitGB: c.ramLimitGB != null ? c.ramLimitGB : null,
     ramLiveGB: c.ramLiveGB != null ? c.ramLiveGB : null,
     config: c.config || null, ports: c.ports, hist: cache.hist[c.id],
+    leakGuard: c.leakGuard || null,
   }));
   res.json({ updatedAt: cache.updatedAt, connected: cache.connected, error: cache.error, host: cache.host, instances, feed: cache.feed });
 });

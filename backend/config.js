@@ -19,6 +19,15 @@ const config = {
     tlsInsecure: env.PVE_TLS_INSECURE === '1',       // explicit opt-in to unverified TLS
   },
 
+  // Leak-guard: ASA leaks memory over uptime. Auto save+restart a world when its RAM
+  // crosses the ceiling AND nobody is online (never disturbs players). Opt-out via env.
+  leakGuard: {
+    enabled: env.ARK_LEAK_GUARD !== '0',
+    ramGB: parseFloat(env.ARK_LEAK_GUARD_GB || '12'),
+    minUptimeH: parseFloat(env.ARK_LEAK_GUARD_MIN_UPTIME_H || '12'),
+    cooldownH: parseFloat(env.ARK_LEAK_GUARD_COOLDOWN_H || '6'),
+  },
+
   // ARK manager on the VM.
   ark: {
     user: env.ARK_USER || 'arkadmin',
