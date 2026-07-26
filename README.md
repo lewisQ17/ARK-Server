@@ -1,65 +1,89 @@
-## ARK ASA Server Manager (map-based)
+# ARK: Survival Ascended — server + dashboard for Ubuntu
 
-This directory contains the **recommended, map-based manager** for ARK: Survival Ascended dedicated servers.
+Run your own ASA dedicated server on a plain Ubuntu machine. One command installs
+everything, creates your first map, sets up a web dashboard behind a login, and
+tells you exactly what is left for you to do.
 
-- `ark-manager.sh`: main entrypoint (TUI dashboard + CLI).
-- `config/`: global defaults and optimization settings.
-- `maps/<MapName>/`: per-map config (`map.conf`, `GameUserSettings.ini`, `Game.ini`, `mods.conf`, `backups/`).
-- `server-files/`, `steamcmd/`, `GE-Proton*/`: server binaries, SteamCMD and Proton runtime.
+```bash
+git clone https://github.com/lewisQ17/ARK-Server.git
+cd ARK-Server
+sudo ./install.sh
+```
 
-### Quick usage
+That's it. The installer walks you through the rest and prints your login details
+at the end (also saved to `/root/ark-install-summary.txt`).
 
-- Start interactive dashboard:
-  - `./ark-manager.sh`
-- Install / update server (SteamCMD + Proton + ASA binaries):
-  - `./ark-manager.sh install`  (or `update`)
-- Manage maps:
-  - Add map: dashboard → **Add Map**
-  - Start/Stop/Restart: dashboard → **Select Map → Start/Stop/Restart**
-  - Start/Stop all batch maps:
-    - `./ark-manager.sh start-all`
-    - `./ark-manager.sh stop-all`
-- Backups:
-  - Per map: map menu → **Backup World** / **Restore Backup**
-  - Files in: `maps/<MapName>/backups/`.
+## What the installer does
 
-### System integration
+| Step | What happens |
+|---|---|
+| 1 | Checks the machine: Ubuntu, x86_64, RAM and free disk. Warns before continuing if something is tight. |
+| 2 | Installs the packages and creates an unprivileged `arkadmin` user that owns and runs the server. |
+| 3 | Downloads SteamCMD, GE-Proton and the ASA server files (~30 GB). |
+| 4 | Creates your first map with a generated admin password, a systemd service and firewall rules. |
+| 5 | Installs the web dashboard as a service, with a generated login. |
+| 6 | Asks how you want to reach it — see below. |
 
-`ark-manager.sh` can integrate with the host system:
+It is **idempotent**: run it again after a failure and it skips whatever is already done.
+Nothing is exposed to the internet unless you ask for it.
 
-- **systemd services**: `ark-<map>.service` created via `create_systemd_service` (called when adding a map).
-- **Healthcheck**:
-  - Script: `healthcheck.sh` (auto-generated).
-  - Cron: every 5 minutes (if system tuning is enabled).
-- **Log rotation**:
-  - `/etc/logrotate.d/ark-server` (server logs + Steam logs).
-- **Kernel tuning**:
-  - `/etc/sysctl.d/99-ark-server.conf` (net/memory tweaks).
+### Options
 
-All these are applied via `apply_optimizations` during `install`, and can be controlled with the `EnableSystemTuning` flag.
+```bash
+sudo ./install.sh --yes --map TheIsland    # unattended
+sudo ./install.sh --no-dashboard           # game server only
+sudo ./install.sh --expose tunnel          # skip the exposure question
+sudo ./install.sh --help                   # all options
+```
 
-### Configuration & security
+## How players reach your server
 
-- Global defaults: `config/server-defaults.conf`
-  - Ports, rates, QoL options, default start parameters.
-- Optimization: `config/optimization.conf`
-  - **EnableSystemTuning=true/false** → controls whether sysctl/logrotate/healthcheck are applied.
-- Per-map:
-  - `maps/<MapName>/map.conf`:
-    - Includes ports, passwords (`AdminPassword`, `ServerPassword`), cluster ID, and custom flags.
-    - File permissions are tightened to `600` when created.
-  - `maps/<MapName>/GameUserSettings.ini`:
-    - Generated via `create_optimized_game_settings`, mirrors passwords from `map.conf` and is also set to `600`.
+Whatever you pick for the dashboard, **players always connect straight to the game**,
+so these two have to be forwarded on your router:
 
-> **Tip:** Choose a strong `AdminPassword` when creating a map. The manager warns if you leave it empty and lets you abort.
+| Port | Protocol | Why |
+|---|---|---|
+| 7777 | UDP | Game traffic — without this nobody can join |
+| 27015 | UDP | Steam query — without this you don't show up in the server list |
 
-### Legacy vs new manager
+**Never forward 27020 (RCON).** It stays on localhost; the dashboard talks to it locally.
 
-- **New (recommended)**: this map-based manager in `ARK server/`.
-- **Legacy**: multi-instance scripts in `old-manager/` (`ark_instance_manager.sh`, `ark_restart_manager.sh`), kept only for existing setups.
-  - New deployments should **not** use `old-manager/` and should migrate to `ark-manager.sh` where possible.
+## How *you* reach the dashboard
 
-# ARK: Survival Ascended — Linux Server Manager
+The installer asks which you want:
+
+- **LAN only** *(recommended)* — reachable on your own network. From outside, tunnel in:
+  `ssh -N -L 8787:127.0.0.1:8787 you@your-server`, then open `http://localhost:8787`.
+  Nothing is exposed.
+- **Port-forward** — you open the dashboard port on your router yourself. It works, but
+  it publishes an admin panel on your home IP where only the login stands between a
+  stranger and your server. The installer prints the exact ports and warns you.
+- **Cloudflare Tunnel** — free, outbound-only: no open ports, your home IP stays hidden,
+  and you get an https address. The installer sets up `cloudflared` and prints the
+  remaining browser steps. Note this only carries the dashboard, not game traffic.
+
+## After installing
+
+```bash
+sudo -u arkadmin /opt/ark-server/ark-manager.sh            # interactive menu
+sudo -u arkadmin /opt/ark-server/ark-manager.sh start-all  # start every map
+systemctl status ark-dashboard                             # the web dashboard
+```
+
+Your passwords live in `/opt/ark-server/maps/<Map>/map.conf` (mode 600) and
+`/opt/ark-dashboard/deploy/.env`. Change them whenever you like — restart the
+dashboard afterwards with `systemctl restart ark-dashboard`.
+
+## Requirements
+
+- Ubuntu 22.04 or 24.04, x86_64
+- 16 GB RAM per map (12 GB is the floor; the installer warns below that)
+- ~40 GB free disk
+- Root access on the machine
+
+---
+
+# Reference — the manager in detail
 
 A clean, powerful, map-centered server manager for running ARK: Survival Ascended dedicated servers on Linux via GE-Proton.
 
@@ -102,25 +126,21 @@ A clean, powerful, map-centered server manager for running ARK: Survival Ascende
 
 - **Delete Protection** — Double confirmation required to delete a map
 
-## Quick Start
+## Manual setup (without install.sh)
+
+Prefer to do it yourself, or installing onto a machine that already has SteamCMD?
 
 ```bash
-# 1. Clone the repo
 git clone https://github.com/lewisQ17/ARK-Server.git
 cd ARK-Server
-
-# 2. Make executable and run
 chmod +x ark-manager.sh
-./ark-manager.sh
 
-# 3. Select "Install / Update Server" from the menu
-#    This installs SteamCMD, GE-Proton, and the ARK dedicated server.
-
-# 4. Select "Add Map" to create your first map (e.g. Extinction, TheIsland)
-#    Set your admin password when prompted.
-
-# 5. Start your map from the dashboard!
+./ark-manager.sh install                       # SteamCMD + GE-Proton + server files
+./ark-manager.sh add-map TheIsland --admin-pw 'choose-something-strong'
+./ark-manager.sh start TheIsland
 ```
+
+Or just run `./ark-manager.sh` and use the menu.
 
 ## CLI Usage
 
@@ -132,6 +152,7 @@ chmod +x ark-manager.sh
 ./ark-manager.sh restart <map>        # Restart a specific map
 ./ark-manager.sh start-all            # Start all groep maps
 ./ark-manager.sh stop-all             # Stop all groep maps
+./ark-manager.sh add-map <Name>       # Create a map without the menu (scriptable)
 ./ark-manager.sh status               # Show all map statuses (CLI)
 ./ark-manager.sh rcon <map> "cmd"     # Send RCON command
 ./ark-manager.sh backup <map>         # Backup map world
@@ -189,14 +210,6 @@ maps/
     server.log              # Server output log
     backups/                # World save backups
 ```
-
-## Requirements
-
-- **OS:** Ubuntu 22.04+ / Debian 12+
-- **RAM:** 16 GB minimum (per running map)
-- **Disk:** 25 GB free minimum
-- **CPU:** Must support AVX/AVX2 (set CPU type to `host` in Proxmox)
-- **Network:** Internet for Steam downloads, open ports for players
 
 ## Proxmox / VM Optimization
 
