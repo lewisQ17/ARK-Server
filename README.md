@@ -22,6 +22,10 @@ The dashboard can start and stop worlds, run RCON and read admin passwords out o
 - Without `DASH_PASS` every request returns **503** — fail-closed by design.
 - It binds to `127.0.0.1` unless you set `BIND=0.0.0.0`. From outside, prefer an
   SSH tunnel or a Cloudflare tunnel over forwarding the port.
+- Running in Docker, `BIND` **must** be `0.0.0.0`: the published port cannot
+  reach a process bound to the container's loopback. `deploy/deploy.sh` writes
+  that plus a generated login into the remote `.env` (kept in the macOS Keychain
+  as `ark-dashboard/admin-pw`, so redeploys reuse it instead of locking you out).
 
 ```bash
 ssh -N -L 8787:127.0.0.1:8787 you@your-server   # then open http://localhost:8787
@@ -68,7 +72,7 @@ mock data with live API data. Rebuild `index.html` after editing either:
 
 Local dev:
 ```bash
-cd backend && cp ../.env.example .env   # fill PVE_PASSWORD (secret get proxmox/root-pw-old)
+cd backend && cp ../.env.example .env   # fill PVE_PASSWORD (secret get proxmox/root-pw)
 npm install && npm start                # http://localhost:8787
 ```
 
