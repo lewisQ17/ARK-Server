@@ -1,3 +1,64 @@
+## ARK ASA Server Manager (map-based)
+
+This directory contains the **recommended, map-based manager** for ARK: Survival Ascended dedicated servers.
+
+- `ark-manager.sh`: main entrypoint (TUI dashboard + CLI).
+- `config/`: global defaults and optimization settings.
+- `maps/<MapName>/`: per-map config (`map.conf`, `GameUserSettings.ini`, `Game.ini`, `mods.conf`, `backups/`).
+- `server-files/`, `steamcmd/`, `GE-Proton*/`: server binaries, SteamCMD and Proton runtime.
+
+### Quick usage
+
+- Start interactive dashboard:
+  - `./ark-manager.sh`
+- Install / update server (SteamCMD + Proton + ASA binaries):
+  - `./ark-manager.sh install`  (or `update`)
+- Manage maps:
+  - Add map: dashboard → **Add Map**
+  - Start/Stop/Restart: dashboard → **Select Map → Start/Stop/Restart**
+  - Start/Stop all batch maps:
+    - `./ark-manager.sh start-all`
+    - `./ark-manager.sh stop-all`
+- Backups:
+  - Per map: map menu → **Backup World** / **Restore Backup**
+  - Files in: `maps/<MapName>/backups/`.
+
+### System integration
+
+`ark-manager.sh` can integrate with the host system:
+
+- **systemd services**: `ark-<map>.service` created via `create_systemd_service` (called when adding a map).
+- **Healthcheck**:
+  - Script: `healthcheck.sh` (auto-generated).
+  - Cron: every 5 minutes (if system tuning is enabled).
+- **Log rotation**:
+  - `/etc/logrotate.d/ark-server` (server logs + Steam logs).
+- **Kernel tuning**:
+  - `/etc/sysctl.d/99-ark-server.conf` (net/memory tweaks).
+
+All these are applied via `apply_optimizations` during `install`, and can be controlled with the `EnableSystemTuning` flag.
+
+### Configuration & security
+
+- Global defaults: `config/server-defaults.conf`
+  - Ports, rates, QoL options, default start parameters.
+- Optimization: `config/optimization.conf`
+  - **EnableSystemTuning=true/false** → controls whether sysctl/logrotate/healthcheck are applied.
+- Per-map:
+  - `maps/<MapName>/map.conf`:
+    - Includes ports, passwords (`AdminPassword`, `ServerPassword`), cluster ID, and custom flags.
+    - File permissions are tightened to `600` when created.
+  - `maps/<MapName>/GameUserSettings.ini`:
+    - Generated via `create_optimized_game_settings`, mirrors passwords from `map.conf` and is also set to `600`.
+
+> **Tip:** Choose a strong `AdminPassword` when creating a map. The manager warns if you leave it empty and lets you abort.
+
+### Legacy vs new manager
+
+- **New (recommended)**: this map-based manager in `ARK server/`.
+- **Legacy**: multi-instance scripts in `old-manager/` (`ark_instance_manager.sh`, `ark_restart_manager.sh`), kept only for existing setups.
+  - New deployments should **not** use `old-manager/` and should migrate to `ark-manager.sh` where possible.
+
 # ARK: Survival Ascended — Linux Server Manager
 
 A clean, powerful, map-centered server manager for running ARK: Survival Ascended dedicated servers on Linux via GE-Proton.

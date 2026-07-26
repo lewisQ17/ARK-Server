@@ -72,10 +72,10 @@ trap cleanup_terminal EXIT
 #  UTILITY FUNCTIONS
 #═══════════════════════════════════════════════════════════════════════════════
 
-log_info()  { echo "${CYN}${BLD}  ℹ ${R} $*"; }
-log_ok()    { echo "${GRN}${BLD}  ✔ ${R} $*"; }
-log_warn()  { echo "${YEL}${BLD}  ⚠ ${R} $*"; }
-log_err()   { echo "${RED}${BLD}  ✖ ${R} $*"; }
+log_info()  { echo "$(date '+%Y-%m-%dT%H:%M:%S') ${CYN}${BLD}[INFO]${R} $*"; }
+log_ok()    { echo "$(date '+%Y-%m-%dT%H:%M:%S') ${GRN}${BLD}[OK]${R} $*"; }
+log_warn()  { echo "$(date '+%Y-%m-%dT%H:%M:%S') ${YEL}${BLD}[WARN]${R} $*"; }
+log_err()   { echo "$(date '+%Y-%m-%dT%H:%M:%S') ${RED}${BLD}[ERROR]${R} $*"; }
 
 separator() { echo "  ${GRY}──────────────────────────────────────────────────────────────────────────────${R}${CL}"; }
 thin_sep()  { echo "  ${GRY}╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌${R}${CL}"; }
@@ -267,9 +267,14 @@ get_player_count() {
     # Cache for 30 seconds (RCON call is slow)
     local cache_file="/tmp/.ark-players-${map}"
     if [[ -f "$cache_file" ]]; then
-        local age
-        age=$(( $(date +%s) - $(stat -c %Y "$cache_file" 2>/dev/null || echo 0) ))
-        if (( age < 30 )); then
+        local now mtime age
+        now=$(date +%s)
+        if mtime=$(stat -c %Y "$cache_file" 2>/dev/null); then
+            age=$(( now - mtime ))
+        else
+            age=0
+        fi
+        if (( age > 0 && age < 30 )); then
             cat "$cache_file"
             return
         fi
@@ -393,9 +398,14 @@ check_server_queryable() {
     # Cache result for 15 seconds
     local cache_file="/tmp/.ark-join-${map}"
     if [[ -f "$cache_file" ]]; then
-        local age
-        age=$(( $(date +%s) - $(stat -c %Y "$cache_file" 2>/dev/null || echo 0) ))
-        if (( age < 15 )); then
+        local now mtime age
+        now=$(date +%s)
+        if mtime=$(stat -c %Y "$cache_file" 2>/dev/null); then
+            age=$(( now - mtime ))
+        else
+            age=0
+        fi
+        if (( age > 0 && age < 15 )); then
             cat "$cache_file"
             return
         fi
@@ -412,10 +422,15 @@ check_server_queryable() {
 
     local result="YES"
 
-    # 1) All ports must be bound on 0.0.0.0 (accessible from network)
-    ss -lunp 2>/dev/null | grep ":${game_port} " | grep -q "0\.0\.0\.0" || result="NO"
-    [[ "$result" == "YES" ]] && { ss -lunp 2>/dev/null | grep ":${query_port} " | grep -q "0\.0\.0\.0" || result="NO"; }
-    [[ "$result" == "YES" ]] && { ss -tlnp 2>/dev/null | grep ":${rcon_port} " | grep -q "0\.0\.0\.0" || result="NO"; }
+    # 1) Ports must be listening; fall back gracefully if 'ss' is unavailable
+    if command -v ss &>/dev/null; then
+        ss -lunp 2>/dev/null | grep -q ":${game_port} " || result="NO"
+        [[ "$result" == "YES" ]] && ss -lunp 2>/dev/null | grep -q ":${query_port} " || result="NO"
+        [[ "$result" == "YES" ]] && ss -tlnp 2>/dev/null | grep -q ":${rcon_port} " || result="NO"
+    else
+        echo "?" | tee "$cache_file"
+        return
+    fi
 
     # 2) Firewall must allow game port
     if [[ "$result" == "YES" ]] && command -v ufw &>/dev/null; then
@@ -641,6 +656,13 @@ add_map() {
     echo -n "  ${WHT}RCON Port${R} ${DIM}[$def_rport]${R}: "; read -r input; [[ "$input" == "0" ]] && return 0; rcon_port="${input:-$def_rport}"
     echo -n "  ${WHT}Max Players${R} ${DIM}[$def_maxp]${R}: "; read -r input; [[ "$input" == "0" ]] && return 0; max_players="${input:-$def_maxp}"
     echo -n "  ${WHT}Admin Password${R} ${DIM}[$def_adminpw]${R}: "; read -r input; [[ "$input" == "0" ]] && return 0; admin_pw="${input:-$def_adminpw}"
+    if [[ -z "$admin_pw" ]]; then
+        log_warn "Admin password left empty — RCON/admin access will be unsecured."
+        if ! confirm "Proceed with empty AdminPassword (not recommended)?"; then
+            FEEDBACK="${YEL}${BLD}⚠${R} Map creation cancelled. Please choose a safer Admin Password."
+            return 1
+        fi
+    fi
     echo -n "  ${WHT}Server Password${R} ${DIM}[empty=public]${R}: "; read -r server_pw; [[ "$server_pw" == "0" ]] && return 0
 
     mkdir -p "$MAPS_DIR/$display_name/backups"
@@ -659,6 +681,8 @@ CustomStartParams=$(read_conf_value "$DEFAULTS_CONF" "DefaultStartParams" "-NoBa
 ClusterID=$(read_conf_value "$DEFAULTS_CONF" "ClusterID" "")
 BatchEnabled=true
 EOF
+
+    chmod 600 "$MAPS_DIR/$display_name/map.conf" 2>/dev/null || true
 
     # Create empty mods.conf
     echo "# Mod configuration for $display_name" > "$MAPS_DIR/$display_name/mods.conf"
@@ -696,8 +720,9 @@ create_optimized_game_settings() {
     show_loc=$(read_conf_value "$DEFAULTS_CONF" "ShowMapPlayerLocation" "True")
     tp=$(read_conf_value "$DEFAULTS_CONF" "AllowThirdPersonPlayer" "True")
     cross=$(read_conf_value "$DEFAULTS_CONF" "ServerCrosshair" "True")
-    local admin_pw rcon_port map_name max_players
+    local admin_pw server_pw rcon_port map_name max_players
     admin_pw=$(read_conf_value "$map_dir/map.conf" "AdminPassword" "")
+    server_pw=$(read_conf_value "$map_dir/map.conf" "ServerPassword" "")
     rcon_port=$(read_conf_value "$map_dir/map.conf" "RCONPort" "27020")
     map_name=$(read_conf_value "$map_dir/map.conf" "DisplayName" "ARK")
     max_players=$(read_conf_value "$map_dir/map.conf" "MaxPlayers" "70")
@@ -707,7 +732,7 @@ create_optimized_game_settings() {
 ShowMapPlayerLocation=$show_loc
 AllowThirdPersonPlayer=$tp
 ServerCrosshair=$cross
-ServerPassword=
+ServerPassword=$server_pw
 ServerAdminPassword=$admin_pw
 RCONEnabled=True
 RCONPort=$rcon_port
@@ -800,6 +825,8 @@ MaxPlayers=$max_players
 [/Script/Engine.GameUserSettings]
 bUseDesiredScreenHeight=False
 GUSEOF
+
+    chmod 600 "$ini_file" 2>/dev/null || true
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
@@ -1647,6 +1674,13 @@ toggle_autostart() {
 #═══════════════════════════════════════════════════════════════════════════════
 
 apply_optimizations() {
+    local enable_tuning
+    enable_tuning=$(read_conf_value "$OPT_CONF" "EnableSystemTuning" "true")
+    if [[ "$enable_tuning" != "true" ]]; then
+        log_warn "System tuning disabled via optimization.conf (EnableSystemTuning=false). Skipping sysctl/logrotate/healthcheck."
+        return 0
+    fi
+
     log_info "Applying system optimizations..."
     if command -v sysctl &>/dev/null; then
         sudo tee "/etc/sysctl.d/99-ark-server.conf" > /dev/null <<'SYSEOF'
@@ -1688,6 +1722,7 @@ setup_healthcheck() {
 SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
 MAPS_DIR="$SCRIPT_DIR/maps"
 LOG="$SCRIPT_DIR/healthcheck.log"
+command -v systemctl &>/dev/null || exit 0
 for map_dir in "$MAPS_DIR"/*/; do
     [[ -d "$map_dir" ]] || continue
     map=$(basename "$map_dir")
@@ -2047,6 +2082,7 @@ show_help() {
     echo ""
     echo "  ${CYN}(none)${R}              Interactive dashboard"
     echo "  ${CYN}install${R}             Install/update server"
+    echo "  ${CYN}plan-install${R}        Preview install/system changes (no writes)"
     echo "  ${CYN}start${R} <map>         Start a map"
     echo "  ${CYN}stop${R} <map>          Stop a map"
     echo "  ${CYN}restart${R} <map>       Restart a map"
@@ -2058,6 +2094,38 @@ show_help() {
     echo "  ${CYN}broadcast${R} \"msg\"     Send message to all maps"
     echo "  ${CYN}help${R}                Show this help"
     echo ""
+}
+
+plan_install() {
+    echo ""
+    echo "  ${BLD}ARK ASA install preview (no changes)${R}"
+    echo ""
+    echo "  ${BLD}Paths:${R}"
+    echo "    Script dir       : ${DIM}$SCRIPT_DIR${R}"
+    echo "    Server files     : ${DIM}$SERVER_DIR${R}"
+    echo "    SteamCMD         : ${DIM}$STEAMCMD_DIR${R}"
+    echo "    Proton           : ${DIM}$PROTON_DIR (${PROTON_VERSION})${R}"
+    echo ""
+    echo "  ${BLD}System integration (if enabled):${R}"
+    local enable_tuning
+    enable_tuning=$(read_conf_value "$OPT_CONF" "EnableSystemTuning" "true")
+    echo "    EnableSystemTuning : ${BLD}$enable_tuning${R}"
+    echo "    sysctl profile     : ${DIM}/etc/sysctl.d/99-ark-server.conf${R}"
+    echo "    logrotate config   : ${DIM}/etc/logrotate.d/ark-server${R}"
+    echo "    healthcheck script : ${DIM}$SCRIPT_DIR/healthcheck.sh${R}"
+    echo "    healthcheck cron   : ${DIM}*/5 * * * * healthcheck.sh${R}"
+    echo ""
+    echo "  ${BLD}Maps discovered:${R}"
+    local maps; maps=( $(get_maps) )
+    if (( ${#maps[@]} == 0 )); then
+        echo "    ${DIM}(none yet)${R}"
+    else
+        for m in "${maps[@]}"; do
+            echo "    - ${BLD}$m${R}"
+        done
+    fi
+    echo ""
+    echo "  ${DIM}No files were changed. Use 'install' to actually perform the install/update.${R}"
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
@@ -2093,6 +2161,7 @@ if [[ $# -eq 0 ]]; then
 else
     case "$1" in
         install|update)   install_server ;;
+        plan-install)     plan_install ;;
         start)            [[ -n "${2:-}" ]] && start_map "$2" || { echo "Usage: $0 start <map>"; exit 1; } ;;
         stop)             [[ -n "${2:-}" ]] && stop_map "$2"  || { echo "Usage: $0 stop <map>"; exit 1; } ;;
         restart)          [[ -n "${2:-}" ]] && restart_map "$2" || { echo "Usage: $0 restart <map>"; exit 1; } ;;

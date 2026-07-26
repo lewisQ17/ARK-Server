@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# LEGACY RESTART MANAGER
+# Kept for existing multi-instance setups using 'ark_instance_manager.sh'.
+# For new setups, prefer the map-based 'ark-manager.sh' in 'ARK server/'.
+
 # Note: Make sure that both this script (ark_restart_manager.sh) and the ark_instance_manager.sh script are located in the same directory.
 
 # --------------------------------------------- CONFIGURATION STARTS HERE --------------------------------------------- #
@@ -89,10 +93,15 @@ announce_restart() {
         if [ $i -lt $((${#announcement_times[@]} - 1)) ]; then
             local next_time=${announcement_times[$((i+1))]}
             local sleep_time=$(( time_before_restart - next_time ))
+            # Guard against misconfigured (non-descending) times
+            if [ "$sleep_time" -lt 0 ]; then
+                log_message "Warning: announcement_times not strictly descending (time_before_restart=$time_before_restart, next_time=$next_time). Using 0s sleep instead of negative value."
+                sleep_time=0
+            fi
             sleep "$sleep_time"
         else
             # For the last entry: Wait for the defined time
-            sleep "$time_before_restart"
+            [ "$time_before_restart" -gt 0 ] && sleep "$time_before_restart"
         fi
     done
 }
