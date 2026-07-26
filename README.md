@@ -1,11 +1,33 @@
 # ARK Server Manager — dashboard
 
-Live web dashboard for the **Extinction** ARK: Survival Ascended server
-(the ARK VM `ARK` on pve, `10.0.0.51`). Pixel-recreation of the Claude Design
-handoff, wired to the real server. Runs as a Docker container on a Docker host —
-**nothing is installed on the ARK VM.**
+Live web dashboard for an ARK: Survival Ascended server: status, players, RCON,
+config, logs and backups from the browser.
 
-## How it connects (nothing on the ARK VM)
+## Two modes
+
+| `ARK_EXEC_MODE` | When | How it reaches the server |
+|---|---|---|
+| **`local`** | The game server runs on the same machine as the dashboard. This is what `install.sh` in the [ARK-Server](https://github.com/lewisQ17/ARK-Server) repo sets up. | Runs `ark-manager.sh` directly, stepping down to the unprivileged `arkadmin` user. Host metrics come from `/proc`. |
+| **`proxmox`** | The game server lives in a Proxmox VM (the original homelab setup). | Proxmox API for metrics and power, guest-agent exec for everything else. **Nothing is installed on the ARK VM.** |
+
+Leave `ARK_EXEC_MODE` empty and it auto-detects: no `PVE_PASSWORD` means `local`.
+
+## Login
+
+The dashboard can start and stop worlds, run RCON and read admin passwords out of
+`map.conf`, so it is **never** served unauthenticated:
+
+- Set `DASH_USER` / `DASH_PASS` in `deploy/.env`. `install.sh` generates a password
+  for you and prints it at the end.
+- Without `DASH_PASS` every request returns **503** — fail-closed by design.
+- It binds to `127.0.0.1` unless you set `BIND=0.0.0.0`. From outside, prefer an
+  SSH tunnel or a Cloudflare tunnel over forwarding the port.
+
+```bash
+ssh -N -L 8787:127.0.0.1:8787 you@your-server   # then open http://localhost:8787
+```
+
+## How it connects in proxmox mode (nothing on the ARK VM)
 
 The backend talks to the **Proxmox API** and reaches the game server two ways:
 

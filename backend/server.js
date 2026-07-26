@@ -7,13 +7,23 @@ const express = require('express');
 const config = require('./config');
 const catalog = require('./config-catalog');
 const { Proxmox } = require('./proxmox');
+const { LocalExec } = require('./local');
+const { basicAuth } = require('./auth');
 const { Unifi } = require('./unifi');
 const { ArkInstance, discoverMaps, createMap, deleteMap, suggestPorts } = require('./ark');
 
 const app = express();
+
+// Auth first: nothing below this line — not the API, not the static frontend —
+// is reachable without credentials.
+app.use(basicAuth(config.auth));
 app.use(express.json());
 
-const pmx = new Proxmox(config.proxmox);
+// One executor, two implementations with the same surface. `local` runs the
+// manager on this machine; `proxmox` tunnels through the guest agent.
+const pmx = config.mode === 'local'
+  ? new LocalExec(config.local)
+  : new Proxmox(config.proxmox);
 // Optional: auto-manage the UDM WAN port-forward for each map's game port.
 const udm = config.unifi.enabled ? new Unifi(config.unifi) : null;
 const fwdName = (display) => `ARK-${display}`;
@@ -457,4 +467,14 @@ app.use(express.static(path.join(__dirname, '..', 'frontend'), {
 }));
 app.get('*', (_req, res) => { res.setHeader('Cache-Control', 'no-cache'); res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html')); });
 
-app.listen(config.port, () => console.log(`ARK dashboard on :${config.port} → VM ${config.proxmox.vmid} @ ${config.proxmox.node}`));
+app.listen(config.port, config.bind, () => {
+  const target = config.mode === 'local'
+    ? `local (manager as ${config.local.runAsUser})`
+    : `VM ${config.proxmox.vmid} @ ${config.proxmox.node}`;
+  console.log(`ARK dashboard on ${config.bind}:${config.port} → ${target}`);
+  if (!config.auth.enabled) {
+    console.warn('WARNING: DASH_AUTH_DISABLED=1 — this dashboard can start/stop worlds and read admin passwords. Do not expose it.');
+  } else if (!config.auth.pass) {
+    console.error('ERROR: DASH_PASS is empty — every request will be refused until you set it in deploy/.env.');
+  }
+});
