@@ -21,8 +21,19 @@ rsync -az --delete \
   "$PROJ"/ "$TARGET:$REMOTE_DIR"/
 
 echo "→ writing remote deploy/.env (secrets from Keychain)"
-PVE_PW="$(~/.claude/bin/secret get proxmox/root-pw-old)"
+PVE_PW="$(~/.claude/bin/secret get proxmox/root-pw)"
 UNIFI_KEY="$(~/.claude/bin/secret get unifi/api-key 2>/dev/null || true)"
+
+# Dashboard login. The panel can stop worlds and read admin passwords, so the
+# backend refuses every request when DASH_PASS is empty. Generate once, keep it
+# in the Keychain so redeploys reuse the same password instead of locking you out.
+DASH_USER="${DASH_USER:-admin}"
+DASH_PW="$(~/.claude/bin/secret get ark-dashboard/admin-pw 2>/dev/null || true)"
+if [ -z "$DASH_PW" ]; then
+  DASH_PW="$(LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 24)"
+  ~/.claude/bin/secret set ark-dashboard/admin-pw "$DASH_PW"
+  echo "  generated a dashboard password → Keychain key ark-dashboard/admin-pw"
+fi
 ssh "$TARGET" "umask 077; cat > $REMOTE_DIR/deploy/.env" <<ENV
 PVE_HOST=10.0.0.10
 PVE_PORT=8006
@@ -38,6 +49,12 @@ ARK_RCON_PASSWORD=
 ARK_MAX_PLAYERS=70
 ARK_RAM_ALLOC=16
 PORT=8787
+# 0.0.0.0 is container-internal: Docker publishes ${HOST_PORT} on the host and
+# cannot reach a process bound to the container's loopback. Exposure is limited
+# by the published port + the Basic-auth login below, not by this bind address.
+BIND=0.0.0.0
+DASH_USER=${DASH_USER}
+DASH_PASS=${DASH_PW}
 POLL_INTERVAL_MS=6000
 UNIFI_HOST=10.0.0.1
 UNIFI_API_KEY=${UNIFI_KEY}
@@ -52,6 +69,11 @@ ssh "$TARGET" "cd $REMOTE_DIR && HOST_PORT=$HOST_PORT docker compose up -d --bui
 
 echo "→ health check"
 sleep 8
-ssh "$TARGET" "curl -s --max-time 8 http://127.0.0.1:$HOST_PORT/api/health || echo 'health check failed'"
+# /api/health sits behind the login like every other route, so authenticate here.
+# Credentials go in over stdin (-K -) so they never land in argv on either host.
+ssh "$TARGET" "curl -s --max-time 8 -K - http://127.0.0.1:$HOST_PORT/api/health || echo 'health check failed'" <<CURLRC
+user = "$DASH_USER:$DASH_PW"
+CURLRC
 echo ""
 echo "✓ deployed. Dashboard: http://$(echo "$TARGET" | sed 's/.*@//'):$HOST_PORT/"
+echo "  login: $DASH_USER  ·  password: secret get ark-dashboard/admin-pw"

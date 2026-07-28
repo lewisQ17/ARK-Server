@@ -8,6 +8,33 @@ const env = process.env;
 const config = {
   port: parseInt(env.PORT || '8787', 10),
 
+  // Where to listen. Default 127.0.0.1: reachable over an SSH tunnel, invisible to
+  // the rest of the network until someone deliberately opens it up. install.sh
+  // flips this to 0.0.0.0 when you choose LAN or port-forward.
+  bind: env.BIND || '127.0.0.1',
+
+  // How commands reach the game server.
+  //   proxmox — the original setup: the server lives in a VM, everything goes over
+  //             the qemu-guest-agent.
+  //   local   — the server runs on this same machine; run the manager directly.
+  // Auto-detected: no PVE_PASSWORD means there is nothing to talk to, so local.
+  mode: (env.ARK_EXEC_MODE || (env.PVE_PASSWORD ? 'proxmox' : 'local')).toLowerCase(),
+
+  // Login for the dashboard itself. Fail-closed: without a password every request
+  // is refused rather than serving an unauthenticated admin panel.
+  auth: {
+    enabled: env.DASH_AUTH_DISABLED !== '1',
+    user: env.DASH_USER || 'admin',
+    pass: env.DASH_PASS || '',
+  },
+
+  local: {
+    // The unprivileged account that owns the server files and runs the maps.
+    runAsUser: env.ARK_USER || 'arkadmin',
+    // "Reboot the VM" means rebooting this machine in local mode — off by default.
+    allowHostPower: env.ALLOW_HOST_POWER === '1',
+  },
+
   proxmox: {
     host: env.PVE_HOST || '10.0.0.10',
     port: parseInt(env.PVE_PORT || '8006', 10),
