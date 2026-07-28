@@ -11,6 +11,15 @@ export LC_ALL=C.UTF-8 LANG=C.UTF-8
 
 #───────────────────────────── Paths ──────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
+
+# Privileged helpers: when we are already root (install.sh runs us that way) call
+# things directly; otherwise go through sudo exactly as before. Arrays so that the
+# empty case doesn't turn into an empty argument.
+if [[ ${EUID:-$(id -u)} -eq 0 ]]; then SUDO=(); SUDO_N=(); else SUDO=(sudo); SUDO_N=(sudo -n); fi
+
+# Which user the generated systemd units run the game server as. install.sh sets this
+# so the units never end up with User=root just because the installer was root.
+ARK_SERVICE_USER="${ARK_SERVICE_USER:-$(whoami)}"
 CONFIG_DIR="$SCRIPT_DIR/config"
 MAPS_DIR="$SCRIPT_DIR/maps"
 MAPS_CONF="$CONFIG_DIR/maps.conf"
@@ -72,10 +81,10 @@ trap cleanup_terminal EXIT
 #  UTILITY FUNCTIONS
 #═══════════════════════════════════════════════════════════════════════════════
 
-log_info()  { echo "${CYN}${BLD}  ℹ ${R} $*"; }
-log_ok()    { echo "${GRN}${BLD}  ✔ ${R} $*"; }
-log_warn()  { echo "${YEL}${BLD}  ⚠ ${R} $*"; }
-log_err()   { echo "${RED}${BLD}  ✖ ${R} $*"; }
+log_info()  { echo "$(date '+%Y-%m-%dT%H:%M:%S') ${CYN}${BLD}[INFO]${R} $*"; }
+log_ok()    { echo "$(date '+%Y-%m-%dT%H:%M:%S') ${GRN}${BLD}[OK]${R} $*"; }
+log_warn()  { echo "$(date '+%Y-%m-%dT%H:%M:%S') ${YEL}${BLD}[WARN]${R} $*"; }
+log_err()   { echo "$(date '+%Y-%m-%dT%H:%M:%S') ${RED}${BLD}[ERROR]${R} $*"; }
 
 separator() { echo "  ${GRY}──────────────────────────────────────────────────────────────────────────────${R}${CL}"; }
 thin_sep()  { echo "  ${GRY}╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌${R}${CL}"; }
@@ -140,9 +149,9 @@ check_dependencies() {
         log_warn "Missing packages: ${missing[*]}"
         if confirm "Install them now? (requires sudo)"; then
             if command -v apt-get &>/dev/null; then
-                sudo dpkg --add-architecture i386 2>/dev/null || true
-                sudo apt-get update -qq
-                sudo apt-get install -y "${missing[@]}"
+                "${SUDO[@]}" dpkg --add-architecture i386 2>/dev/null || true
+                "${SUDO[@]}" apt-get update -qq
+                "${SUDO[@]}" apt-get install -y "${missing[@]}"
             fi
             log_ok "Dependencies installed."
         fi
@@ -267,9 +276,14 @@ get_player_count() {
     # Cache for 30 seconds (RCON call is slow)
     local cache_file="/tmp/.ark-players-${map}"
     if [[ -f "$cache_file" ]]; then
-        local age
-        age=$(( $(date +%s) - $(stat -c %Y "$cache_file" 2>/dev/null || echo 0) ))
-        if (( age < 30 )); then
+        local now mtime age
+        now=$(date +%s)
+        if mtime=$(stat -c %Y "$cache_file" 2>/dev/null); then
+            age=$(( now - mtime ))
+        else
+            age=0
+        fi
+        if (( age > 0 && age < 30 )); then
             cat "$cache_file"
             return
         fi
@@ -393,9 +407,14 @@ check_server_queryable() {
     # Cache result for 15 seconds
     local cache_file="/tmp/.ark-join-${map}"
     if [[ -f "$cache_file" ]]; then
-        local age
-        age=$(( $(date +%s) - $(stat -c %Y "$cache_file" 2>/dev/null || echo 0) ))
-        if (( age < 15 )); then
+        local now mtime age
+        now=$(date +%s)
+        if mtime=$(stat -c %Y "$cache_file" 2>/dev/null); then
+            age=$(( now - mtime ))
+        else
+            age=0
+        fi
+        if (( age > 0 && age < 15 )); then
             cat "$cache_file"
             return
         fi
@@ -412,15 +431,20 @@ check_server_queryable() {
 
     local result="YES"
 
-    # 1) All ports must be bound on 0.0.0.0 (accessible from network)
-    ss -lunp 2>/dev/null | grep ":${game_port} " | grep -q "0\.0\.0\.0" || result="NO"
-    [[ "$result" == "YES" ]] && { ss -lunp 2>/dev/null | grep ":${query_port} " | grep -q "0\.0\.0\.0" || result="NO"; }
-    [[ "$result" == "YES" ]] && { ss -tlnp 2>/dev/null | grep ":${rcon_port} " | grep -q "0\.0\.0\.0" || result="NO"; }
+    # 1) Ports must be listening; fall back gracefully if 'ss' is unavailable
+    if command -v ss &>/dev/null; then
+        ss -lunp 2>/dev/null | grep -q ":${game_port} " || result="NO"
+        [[ "$result" == "YES" ]] && ss -lunp 2>/dev/null | grep -q ":${query_port} " || result="NO"
+        [[ "$result" == "YES" ]] && ss -tlnp 2>/dev/null | grep -q ":${rcon_port} " || result="NO"
+    else
+        echo "?" | tee "$cache_file"
+        return
+    fi
 
     # 2) Firewall must allow game port
     if [[ "$result" == "YES" ]] && command -v ufw &>/dev/null; then
         local ufw_out
-        ufw_out=$(sudo -n ufw status 2>/dev/null || echo "")
+        ufw_out=$("${SUDO_N[@]}" ufw status 2>/dev/null || echo "")
         if echo "$ufw_out" | grep -q "Status: active"; then
             echo "$ufw_out" | grep -qE "${game_port}" || result="NO"
         fi
@@ -641,6 +665,13 @@ add_map() {
     echo -n "  ${WHT}RCON Port${R} ${DIM}[$def_rport]${R}: "; read -r input; [[ "$input" == "0" ]] && return 0; rcon_port="${input:-$def_rport}"
     echo -n "  ${WHT}Max Players${R} ${DIM}[$def_maxp]${R}: "; read -r input; [[ "$input" == "0" ]] && return 0; max_players="${input:-$def_maxp}"
     echo -n "  ${WHT}Admin Password${R} ${DIM}[$def_adminpw]${R}: "; read -r input; [[ "$input" == "0" ]] && return 0; admin_pw="${input:-$def_adminpw}"
+    if [[ -z "$admin_pw" ]]; then
+        log_warn "Admin password left empty — RCON/admin access will be unsecured."
+        if ! confirm "Proceed with empty AdminPassword (not recommended)?"; then
+            FEEDBACK="${YEL}${BLD}⚠${R} Map creation cancelled. Please choose a safer Admin Password."
+            return 1
+        fi
+    fi
     echo -n "  ${WHT}Server Password${R} ${DIM}[empty=public]${R}: "; read -r server_pw; [[ "$server_pw" == "0" ]] && return 0
 
     mkdir -p "$MAPS_DIR/$display_name/backups"
@@ -660,6 +691,8 @@ ClusterID=$(read_conf_value "$DEFAULTS_CONF" "ClusterID" "")
 BatchEnabled=true
 EOF
 
+    chmod 600 "$MAPS_DIR/$display_name/map.conf" 2>/dev/null || true
+
     # Create empty mods.conf
     echo "# Mod configuration for $display_name" > "$MAPS_DIR/$display_name/mods.conf"
     echo "# Format: id|name|enabled" >> "$MAPS_DIR/$display_name/mods.conf"
@@ -671,6 +704,108 @@ EOF
     open_firewall_ports "$game_port" "$query_port" "$rcon_port"
 
     FEEDBACK="${GRN}${BLD}✔${R} Map '${BLD}$display_name${R}' created and ready!"
+}
+
+#-------------------------------------------------------------------------------
+#  add_map_cli — non-interactive map creation (used by install.sh and automation)
+#
+#  Usage: ark-manager.sh add-map <DisplayName> [--internal NAME] [--game-port N]
+#                                [--query-port N] [--rcon-port N] [--max-players N]
+#                                [--admin-pw PW] [--server-pw PW]
+#
+#  Ports auto-increment past the highest existing map, exactly like the menu does.
+#  An admin password is REQUIRED (generated if omitted) — an empty one leaves RCON
+#  wide open, which is fine to be asked about interactively but never a safe default
+#  for automation.
+#-------------------------------------------------------------------------------
+add_map_cli() {
+    local display_name="${1:-}"; shift || true
+    [[ -z "$display_name" ]] && { echo "Usage: $0 add-map <DisplayName> [--internal NAME] [--game-port N] ..."; return 1; }
+
+    local internal_name="" game_port="" query_port="" rcon_port="" max_players="" admin_pw="" server_pw=""
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --internal)     internal_name="${2:-}"; shift 2 ;;
+            --game-port)    game_port="${2:-}";     shift 2 ;;
+            --query-port)   query_port="${2:-}";    shift 2 ;;
+            --rcon-port)    rcon_port="${2:-}";     shift 2 ;;
+            --max-players)  max_players="${2:-}";   shift 2 ;;
+            --admin-pw)     admin_pw="${2:-}";      shift 2 ;;
+            --server-pw)    server_pw="${2:-}";     shift 2 ;;
+            *) echo "Unknown option for add-map: $1"; return 1 ;;
+        esac
+    done
+
+    if [[ -d "$MAPS_DIR/$display_name" ]]; then
+        log_ok "Map '$display_name' already exists — nothing to do."
+        return 0
+    fi
+
+    # Known map? then we know its internal name; otherwise the caller must supply one.
+    if [[ -z "$internal_name" ]]; then
+        internal_name="${MAP_NAMES[$display_name]:-}"
+        [[ -z "$internal_name" ]] && {
+            log_err "'$display_name' is not a known map. Pass --internal <InternalName> (e.g. MyMap_WP)."
+            return 1
+        }
+    fi
+
+    # Defaults from server-defaults.conf, then auto-increment past existing maps.
+    game_port="${game_port:-$(read_conf_value "$DEFAULTS_CONF" "DefaultGamePort" "7777")}"
+    query_port="${query_port:-$(read_conf_value "$DEFAULTS_CONF" "DefaultQueryPort" "27015")}"
+    rcon_port="${rcon_port:-$(read_conf_value "$DEFAULTS_CONF" "DefaultRCONPort" "27020")}"
+    max_players="${max_players:-$(read_conf_value "$DEFAULTS_CONF" "DefaultMaxPlayers" "70")}"
+
+    local existing_maps; existing_maps=( $(get_maps) )
+    if (( ${#existing_maps[@]} > 0 )); then
+        local max_g=0 max_q=0 max_r=0 gp qp rp
+        for em in "${existing_maps[@]}"; do
+            gp=$(read_conf_value "$MAPS_DIR/$em/map.conf" "GamePort" "0")
+            qp=$(read_conf_value "$MAPS_DIR/$em/map.conf" "QueryPort" "0")
+            rp=$(read_conf_value "$MAPS_DIR/$em/map.conf" "RCONPort" "0")
+            (( gp > max_g )) && max_g=$gp
+            (( qp > max_q )) && max_q=$qp
+            (( rp > max_r )) && max_r=$rp
+        done
+        game_port=$(( max_g + 2 )); query_port=$(( max_q + 1 )); rcon_port=$(( max_r + 1 ))
+    fi
+
+    # Never leave RCON unauthenticated in an automated run.
+    if [[ -z "$admin_pw" ]]; then
+        admin_pw=$(read_conf_value "$DEFAULTS_CONF" "DefaultAdminPassword" "")
+    fi
+    if [[ -z "$admin_pw" ]]; then
+        admin_pw=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 20)
+        log_warn "No admin password given — generated one. It is stored in $MAPS_DIR/$display_name/map.conf (mode 600)."
+    fi
+
+    mkdir -p "$MAPS_DIR/$display_name/backups"
+    cat > "$MAPS_DIR/$display_name/map.conf" <<EOF
+MapName=$internal_name
+DisplayName=$display_name
+SaveDir=$display_name
+GamePort=$game_port
+QueryPort=$query_port
+RCONPort=$rcon_port
+MaxPlayers=$max_players
+AdminPassword=$admin_pw
+ServerPassword=$server_pw
+CustomStartParams=$(read_conf_value "$DEFAULTS_CONF" "DefaultStartParams" "-NoBattlEye -crossplay -NoHangDetection")
+ClusterID=$(read_conf_value "$DEFAULTS_CONF" "ClusterID" "")
+BatchEnabled=true
+EOF
+    chmod 600 "$MAPS_DIR/$display_name/map.conf" 2>/dev/null || true
+
+    echo "# Mod configuration for $display_name"  > "$MAPS_DIR/$display_name/mods.conf"
+    echo "# Format: id|name|enabled"             >> "$MAPS_DIR/$display_name/mods.conf"
+
+    create_optimized_game_settings "$MAPS_DIR/$display_name" "high"
+    [[ ! -f "$MAPS_DIR/$display_name/Game.ini" ]] && touch "$MAPS_DIR/$display_name/Game.ini"
+    echo "${display_name}|${internal_name}|enabled" >> "$MAPS_CONF"
+    create_systemd_service "$display_name"
+    open_firewall_ports "$game_port" "$query_port" "$rcon_port"
+
+    log_ok "Map '$display_name' created — game $game_port/udp, query $query_port/udp, rcon $rcon_port (localhost)."
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
@@ -696,8 +831,9 @@ create_optimized_game_settings() {
     show_loc=$(read_conf_value "$DEFAULTS_CONF" "ShowMapPlayerLocation" "True")
     tp=$(read_conf_value "$DEFAULTS_CONF" "AllowThirdPersonPlayer" "True")
     cross=$(read_conf_value "$DEFAULTS_CONF" "ServerCrosshair" "True")
-    local admin_pw rcon_port map_name max_players
+    local admin_pw server_pw rcon_port map_name max_players
     admin_pw=$(read_conf_value "$map_dir/map.conf" "AdminPassword" "")
+    server_pw=$(read_conf_value "$map_dir/map.conf" "ServerPassword" "")
     rcon_port=$(read_conf_value "$map_dir/map.conf" "RCONPort" "27020")
     map_name=$(read_conf_value "$map_dir/map.conf" "DisplayName" "ARK")
     max_players=$(read_conf_value "$map_dir/map.conf" "MaxPlayers" "70")
@@ -707,7 +843,7 @@ create_optimized_game_settings() {
 ShowMapPlayerLocation=$show_loc
 AllowThirdPersonPlayer=$tp
 ServerCrosshair=$cross
-ServerPassword=
+ServerPassword=$server_pw
 ServerAdminPassword=$admin_pw
 RCONEnabled=True
 RCONPort=$rcon_port
@@ -800,6 +936,8 @@ MaxPlayers=$max_players
 [/Script/Engine.GameUserSettings]
 bUseDesiredScreenHeight=False
 GUSEOF
+
+    chmod 600 "$ini_file" 2>/dev/null || true
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
@@ -938,7 +1076,7 @@ create_systemd_service() {
     local service_name="ark-${map,,}.service"
     local service_file="/etc/systemd/system/$service_name"
     log_info "Creating systemd service: ${BLD}$service_name${R}"
-    sudo tee "$service_file" > /dev/null <<SVCEOF
+    "${SUDO[@]}" tee "$service_file" > /dev/null <<SVCEOF
 [Unit]
 Description=ARK ASA Server - $map
 After=network-online.target
@@ -946,10 +1084,10 @@ Wants=network-online.target
 
 [Service]
 Type=forking
-User=$(whoami)
+User=${ARK_SERVICE_USER}
 WorkingDirectory=$SCRIPT_DIR
 Environment=PROTON_LOG=1
-Environment=PROTON_LOG_DIR=$HOME
+Environment=PROTON_LOG_DIR=$(getent passwd "$ARK_SERVICE_USER" 2>/dev/null | cut -d: -f6 || echo "$HOME")
 ExecStart=$SCRIPT_DIR/ark-manager.sh start $map
 ExecStop=$SCRIPT_DIR/ark-manager.sh stop $map
 Restart=on-failure
@@ -962,18 +1100,18 @@ CPUAccounting=true
 [Install]
 WantedBy=multi-user.target
 SVCEOF
-    sudo systemctl daemon-reload
-    sudo systemctl enable "$service_name" 2>/dev/null || true
+    "${SUDO[@]}" systemctl daemon-reload
+    "${SUDO[@]}" systemctl enable "$service_name" 2>/dev/null || true
     log_ok "Service '${BLD}$service_name${R}${GRN}' created."
 }
 
 open_firewall_ports() {
     local game_port="$1" query_port="$2" rcon_port="$3"
     if command -v ufw &>/dev/null; then
-        sudo ufw allow "${game_port}/udp" 2>/dev/null || true
-        sudo ufw allow "$(( game_port + 1 ))/udp" 2>/dev/null || true
-        sudo ufw allow "${query_port}/udp" 2>/dev/null || true
-        sudo ufw allow "${rcon_port}/tcp" 2>/dev/null || true
+        "${SUDO[@]}" ufw allow "${game_port}/udp" 2>/dev/null || true
+        "${SUDO[@]}" ufw allow "$(( game_port + 1 ))/udp" 2>/dev/null || true
+        "${SUDO[@]}" ufw allow "${query_port}/udp" 2>/dev/null || true
+        "${SUDO[@]}" ufw allow "${rcon_port}/tcp" 2>/dev/null || true
     fi
 }
 
@@ -1575,10 +1713,10 @@ delete_map() {
     fi
 
     local service_name="ark-${map,,}.service"
-    sudo systemctl stop "$service_name" 2>/dev/null || true
-    sudo systemctl disable "$service_name" 2>/dev/null || true
-    sudo rm -f "/etc/systemd/system/$service_name"
-    sudo systemctl daemon-reload
+    "${SUDO[@]}" systemctl stop "$service_name" 2>/dev/null || true
+    "${SUDO[@]}" systemctl disable "$service_name" 2>/dev/null || true
+    "${SUDO[@]}" rm -f "/etc/systemd/system/$service_name"
+    "${SUDO[@]}" systemctl daemon-reload
     sed -i "/^${map}|/d" "$MAPS_CONF"
     rm -rf "$MAPS_DIR/$map"
     rm -f "/tmp/.ark-players-${map}" "/tmp/.ark-join-${map}"
@@ -1634,10 +1772,10 @@ toggle_autostart() {
     local map="$1"
     local service="ark-${map,,}.service"
     if systemctl is-enabled "$service" 2>/dev/null | grep -q "enabled"; then
-        sudo systemctl disable "$service" 2>/dev/null
+        "${SUDO[@]}" systemctl disable "$service" 2>/dev/null
         echo "${GRN}${BLD}✔${R} ${BLD}$map${R}: Auto-start ${RED}UIT${R} — start niet na reboot/stroomstoring"
     else
-        sudo systemctl enable "$service" 2>/dev/null
+        "${SUDO[@]}" systemctl enable "$service" 2>/dev/null
         echo "${GRN}${BLD}✔${R} ${BLD}$map${R}: Auto-start ${GRN}AAN${R} — start automatisch na reboot/stroomstoring"
     fi
 }
@@ -1647,9 +1785,16 @@ toggle_autostart() {
 #═══════════════════════════════════════════════════════════════════════════════
 
 apply_optimizations() {
+    local enable_tuning
+    enable_tuning=$(read_conf_value "$OPT_CONF" "EnableSystemTuning" "true")
+    if [[ "$enable_tuning" != "true" ]]; then
+        log_warn "System tuning disabled via optimization.conf (EnableSystemTuning=false). Skipping sysctl/logrotate/healthcheck."
+        return 0
+    fi
+
     log_info "Applying system optimizations..."
     if command -v sysctl &>/dev/null; then
-        sudo tee "/etc/sysctl.d/99-ark-server.conf" > /dev/null <<'SYSEOF'
+        "${SUDO[@]}" tee "/etc/sysctl.d/99-ark-server.conf" > /dev/null <<'SYSEOF'
 vm.swappiness=10
 net.core.rmem_max=26214400
 net.core.wmem_max=26214400
@@ -1657,7 +1802,7 @@ net.core.rmem_default=1048576
 net.core.wmem_default=1048576
 net.ipv4.udp_mem=65536 131072 262144
 SYSEOF
-        sudo sysctl --system -q 2>/dev/null || true
+        "${SUDO[@]}" sysctl --system -q 2>/dev/null || true
     fi
     setup_logrotate; setup_healthcheck
     log_ok "All optimizations applied."
@@ -1665,7 +1810,7 @@ SYSEOF
 
 setup_logrotate() {
     command -v logrotate &>/dev/null || return
-    sudo tee "/etc/logrotate.d/ark-server" > /dev/null <<LREOF
+    "${SUDO[@]}" tee "/etc/logrotate.d/ark-server" > /dev/null <<LREOF
 $MAPS_DIR/*/server.log
 $HOME/steam-*.log
 {
@@ -1688,6 +1833,7 @@ setup_healthcheck() {
 SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
 MAPS_DIR="$SCRIPT_DIR/maps"
 LOG="$SCRIPT_DIR/healthcheck.log"
+command -v systemctl &>/dev/null || exit 0
 for map_dir in "$MAPS_DIR"/*/; do
     [[ -d "$map_dir" ]] || continue
     map=$(basename "$map_dir")
@@ -2047,17 +2193,53 @@ show_help() {
     echo ""
     echo "  ${CYN}(none)${R}              Interactive dashboard"
     echo "  ${CYN}install${R}             Install/update server"
+    echo "  ${CYN}plan-install${R}        Preview install/system changes (no writes)"
     echo "  ${CYN}start${R} <map>         Start a map"
     echo "  ${CYN}stop${R} <map>          Stop a map"
     echo "  ${CYN}restart${R} <map>       Restart a map"
     echo "  ${CYN}start-all${R}           Start all groep maps"
     echo "  ${CYN}stop-all${R}            Stop all groep maps"
+    echo "  ${CYN}add-map${R} <Name>      Create a map without the menu (for scripts/install.sh)"
+    echo "  ${DIM}                        [--internal N] [--game-port N] [--query-port N]${R}"
+    echo "  ${DIM}                        [--rcon-port N] [--max-players N] [--admin-pw PW] [--server-pw PW]${R}"
     echo "  ${CYN}status${R}              Show all map statuses"
     echo "  ${CYN}rcon${R} <map> \"cmd\"    Send RCON command"
     echo "  ${CYN}backup${R} <map>        Backup map world"
     echo "  ${CYN}broadcast${R} \"msg\"     Send message to all maps"
     echo "  ${CYN}help${R}                Show this help"
     echo ""
+}
+
+plan_install() {
+    echo ""
+    echo "  ${BLD}ARK ASA install preview (no changes)${R}"
+    echo ""
+    echo "  ${BLD}Paths:${R}"
+    echo "    Script dir       : ${DIM}$SCRIPT_DIR${R}"
+    echo "    Server files     : ${DIM}$SERVER_DIR${R}"
+    echo "    SteamCMD         : ${DIM}$STEAMCMD_DIR${R}"
+    echo "    Proton           : ${DIM}$PROTON_DIR (${PROTON_VERSION})${R}"
+    echo ""
+    echo "  ${BLD}System integration (if enabled):${R}"
+    local enable_tuning
+    enable_tuning=$(read_conf_value "$OPT_CONF" "EnableSystemTuning" "true")
+    echo "    EnableSystemTuning : ${BLD}$enable_tuning${R}"
+    echo "    sysctl profile     : ${DIM}/etc/sysctl.d/99-ark-server.conf${R}"
+    echo "    logrotate config   : ${DIM}/etc/logrotate.d/ark-server${R}"
+    echo "    healthcheck script : ${DIM}$SCRIPT_DIR/healthcheck.sh${R}"
+    echo "    healthcheck cron   : ${DIM}*/5 * * * * healthcheck.sh${R}"
+    echo ""
+    echo "  ${BLD}Maps discovered:${R}"
+    local maps; maps=( $(get_maps) )
+    if (( ${#maps[@]} == 0 )); then
+        echo "    ${DIM}(none yet)${R}"
+    else
+        for m in "${maps[@]}"; do
+            echo "    - ${BLD}$m${R}"
+        done
+    fi
+    echo ""
+    echo "  ${DIM}No files were changed. Use 'install' to actually perform the install/update.${R}"
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
@@ -2093,11 +2275,13 @@ if [[ $# -eq 0 ]]; then
 else
     case "$1" in
         install|update)   install_server ;;
+        plan-install)     plan_install ;;
         start)            [[ -n "${2:-}" ]] && start_map "$2" || { echo "Usage: $0 start <map>"; exit 1; } ;;
         stop)             [[ -n "${2:-}" ]] && stop_map "$2"  || { echo "Usage: $0 stop <map>"; exit 1; } ;;
         restart)          [[ -n "${2:-}" ]] && restart_map "$2" || { echo "Usage: $0 restart <map>"; exit 1; } ;;
         start-all)        start_all_maps ;;
         stop-all)         stop_all_maps ;;
+        add-map)          shift; add_map_cli "$@" ;;
         status)           cli_status ;;
         rcon)             [[ -n "${2:-}" ]] && [[ -n "${3:-}" ]] && send_rcon "$2" "${*:3}" || { echo "Usage: $0 rcon <map> \"cmd\""; exit 1; } ;;
         backup)           [[ -n "${2:-}" ]] && backup_map "$2" || { echo "Usage: $0 backup <map>"; exit 1; } ;;

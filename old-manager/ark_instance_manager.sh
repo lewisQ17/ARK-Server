@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# LEGACY MANAGER
+# This multi-instance manager is kept for backwards compatibility.
+# For new setups, prefer the map-based 'ark-manager.sh' in 'ARK server/'.
+
 export LC_ALL=C.UTF-8
 export LANG=C.UTF-8
 export LANGUAGE=C.UTF-8
