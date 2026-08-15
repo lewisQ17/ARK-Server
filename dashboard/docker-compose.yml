@@ -1,0 +1,8 @@
+services:
+  ark-dashboard:
+    build: .
+    container_name: ark-dashboard
+    restart: unless-stopped
+    env_file: ./deploy/.env
+    ports:
+      - "${HOST_PORT:-8790}:8787"
