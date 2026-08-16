@@ -626,7 +626,7 @@ class Component extends DCLogic {
         whisper:()=>this.sendRcon(selectedInst.id,'ServerChatToPlayer "'+(p.name||'')+'" An admin says hi')})),
       playerCount: selectedInst.players||0, max:selectedInst.max||70,
       metrics:[
-        {k:'CPU',sub:(selectedInst.coresAlloc!=null?(selectedInst.coresAlloc+' vCPU cap'):'the ARK VM · 4 vCPU'),big:selectedInst.cpuStr,unit:'',pct:idle?0:(parseInt(selectedInst.cpuStr)||0),alloc:'host VM',color:'#37D3C3',flag:null},
+        {k:'CPU',sub:(selectedInst.coresAlloc!=null?(selectedInst.coresAlloc+' vCPU cap'):'host VM'),big:selectedInst.cpuStr,unit:'',pct:idle?0:(parseInt(selectedInst.cpuStr)||0),alloc:'host VM',color:'#37D3C3',flag:null},
         (function(cap,use){ return {k:'Memory',sub:cap+' GB cap',big:use,unit:'GB',pct:Math.round((parseFloat(use)||0)/cap*100),alloc:'of '+cap+' GB',color:'#FF7A2E',flag: idle?'Idle — VM RAM reclaimable':null}; })(selectedInst.ramLimitGB!=null?selectedInst.ramLimitGB:(selectedInst.ramAlloc||16), selectedInst.ramLiveGB!=null?selectedInst.ramLiveGB:selectedInst.ramUsed),
         {k:'Disk',sub:'VM disk',big:host.diskUsed!=null?host.diskUsed:'—',unit:host.diskUsed!=null?'GB':'',pct:host.diskTotal?Math.round(host.diskUsed/host.diskTotal*100):0,alloc:host.diskTotal?('of '+host.diskTotal+' GB'):'—',color:'#8C7BF7',flag:null},
         {k:'Network',sub:'in / out',big:idle?'0':((((host.netin||0)+(host.netout||0))/125000).toFixed(1)),unit:'Mb/s',pct:idle?0:20,alloc:((host.netin||0)/125000).toFixed(1)+' Mb/s in',color:'#37D67A',flag:null}
@@ -663,7 +663,7 @@ class Component extends DCLogic {
     const nav=navDef.map(d=>{ const active=v===d[0]; const badge=d[0]==='console'?(live.connected?'live':null):null;
       return {label:d[1], go:()=>this.setView(d[0]), active, style:this.navStyle(active), icon:icn(d[0],19), iconStyle:{color:active?'var(--ember)':'var(--faint)',display:'flex'},
         badge, badgeStyle:{fontSize:'9px',fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',color:'var(--green)',background:'rgba(55,214,122,.14)',border:'1px solid rgba(55,214,122,.3)',padding:'1px 6px',borderRadius:'5px'} }; });
-    const connLabel = live.connected? (running+' running · the ARK VM @ pve') : ('offline · '+(live.error?String(live.error).slice(0,40):'connecting…'));
+    const connLabel = live.connected? (running+' running · ARK VM') : ('offline · '+(live.error?String(live.error).slice(0,40):'connecting…'));
     const T={overview:['Overview','Extinction cluster · '+connLabel],instance:[selectedInst.name,'Instance control · '+(selectedInst.map||'')],cluster:['Cluster','Single map — cluster not configured'],console:['Live Console','game log + RCON · '+selectedInst.name],backups:['Backups & Snapshots','ark-manager saved worlds'],settings:['Settings','Server configuration'],mobile:['Mobile / PWA','Companion view']};
     const clock=s.now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
     const date=s.now.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short'});

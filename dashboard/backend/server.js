@@ -238,7 +238,7 @@ app.post('/api/instance/:id/action', async (req, res) => {
     }
     if (['vmreboot', 'vmshutdown', 'vmstart', 'vmstop'].includes(action)) {
       const map = { vmstart: 'start', vmstop: 'stop', vmreboot: 'reboot', vmshutdown: 'shutdown' };
-      await pmx.vmPower(map[action]); logAudit('admin', 'VM ' + map[action], 'the ARK VM', true);
+      await pmx.vmPower(map[action]); logAudit('admin', 'VM ' + map[action], 'VM ' + config.proxmox.vmid, true);
       return res.json({ ok: true, output: `VM ${map[action]} requested` });
     }
     if (action === 'save' && ark) { logAudit('admin', 'SaveWorld', ark.name); return res.json(await ark.rcon('SaveWorld')); }

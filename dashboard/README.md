@@ -50,7 +50,7 @@ password is read from the VM's own `map.conf` at runtime and passed over **stdin
 browser ─http→ dashboard container (Docker host)
                      │  Proxmox API (root ticket)
                      ▼
-              pve ──guest-exec──► the ARK VM (ARK Extinction)
+          Proxmox node ──guest-exec──► ARK VM
                      └─rrddata────►  (metrics, no guest touch)
 ```
 
@@ -72,7 +72,7 @@ mock data with live API data. Rebuild `index.html` after editing either:
 
 Local dev:
 ```bash
-cd backend && cp ../.env.example .env   # fill PVE_PASSWORD (secret get proxmox/root-pw)
+cd backend && cp ../.env.example .env   # fill in your Proxmox host/node/VM id + password
 npm install && npm start                # http://localhost:8787
 ```
 

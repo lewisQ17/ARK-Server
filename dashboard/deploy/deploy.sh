@@ -1,17 +1,36 @@
 #!/usr/bin/env bash
 # Deploy the ARK dashboard to a Docker host over SSH.
-#   ./deploy/deploy.sh <ssh-target>
+#   ./deploy/deploy.sh <ssh-target> [remote-dir] [host-port]
 # e.g. ./deploy/deploy.sh docker-host   (or root@10.0.0.20, or an ssh alias)
 #
-# Pulls the PVE root password from the macOS Keychain and writes it into a
-# remote deploy/.env (chmod 600). The RCON admin password is NOT stored here —
-# the app reads it from the ARK VM at runtime.
+# Site-specific settings (which Proxmox, which VM, which UniFi) live in
+# deploy/site.env, which is gitignored — this script ships no addresses. Copy
+# deploy/site.env.example to deploy/site.env once and fill it in.
+#
+# Secrets come from the macOS Keychain and are written into a remote
+# deploy/.env (chmod 600). The RCON admin password is NOT stored here — the app
+# reads it from the ARK VM at runtime.
 set -euo pipefail
 
-TARGET="${1:?usage: deploy.sh <ssh-target>}"
+TARGET="${1:?usage: deploy.sh <ssh-target> [remote-dir] [host-port]}"
 REMOTE_DIR="${2:-/opt/ark-dashboard}"
 HOST_PORT="${3:-8790}"
 PROJ="$(cd "$(dirname "$0")/.." && pwd)"
+
+# Where this particular deployment points. Kept out of git so the repo carries
+# no network layout; without it we stop rather than guess at an address.
+SITE_ENV="$(dirname "$0")/site.env"
+if [ ! -f "$SITE_ENV" ]; then
+  echo "error: $SITE_ENV not found." >&2
+  echo "       cp $(dirname "$0")/site.env.example $SITE_ENV and fill in your own values." >&2
+  exit 1
+fi
+# shellcheck source=/dev/null
+. "$SITE_ENV"
+
+for v in PVE_HOST PVE_NODE PVE_VMID ARK_SERVICE PVE_PW_KEY; do
+  [ -n "${!v:-}" ] || { echo "error: $v is empty in $SITE_ENV" >&2; exit 1; }
+done
 
 echo "→ syncing $PROJ to $TARGET:$REMOTE_DIR"
 ssh "$TARGET" "mkdir -p $REMOTE_DIR/deploy"
@@ -21,8 +40,10 @@ rsync -az --delete \
   "$PROJ"/ "$TARGET:$REMOTE_DIR"/
 
 echo "→ writing remote deploy/.env (secrets from Keychain)"
-PVE_PW="$(~/.claude/bin/secret get proxmox/root-pw)"
-UNIFI_KEY="$(~/.claude/bin/secret get unifi/api-key 2>/dev/null || true)"
+# Which Keychain entries hold the secrets. The names themselves are site-specific
+# (they tend to be named after your own hosts), so they come from site.env too.
+PVE_PW="$(~/.claude/bin/secret get "${PVE_PW_KEY:?PVE_PW_KEY missing in site.env}")"
+UNIFI_KEY="$(~/.claude/bin/secret get "${UNIFI_KEY_KEY:-unifi/api-key}" 2>/dev/null || true)"
 
 # Dashboard login. The panel can stop worlds and read admin passwords, so the
 # backend refuses every request when DASH_PASS is empty. Generate once, keep it
@@ -35,19 +56,19 @@ if [ -z "$DASH_PW" ]; then
   echo "  generated a dashboard password → Keychain key ark-dashboard/admin-pw"
 fi
 ssh "$TARGET" "umask 077; cat > $REMOTE_DIR/deploy/.env" <<ENV
-PVE_HOST=10.0.0.10
-PVE_PORT=8006
-PVE_NODE=pve
-PVE_VMID=100
-PVE_USER=root@pam
+PVE_HOST=${PVE_HOST}
+PVE_PORT=${PVE_PORT:-8006}
+PVE_NODE=${PVE_NODE}
+PVE_VMID=${PVE_VMID}
+PVE_USER=${PVE_USER:-root@pam}
 PVE_PASSWORD=${PVE_PW}
-ARK_SERVICE=ark-extinction
-ARK_USER=arkadmin
-ARK_MANAGER=/home/arkadmin/ark-manager/ark-manager.sh
-ARK_RCON_PORT=27020
+ARK_SERVICE=${ARK_SERVICE}
+ARK_USER=${ARK_USER:-arkadmin}
+ARK_MANAGER=${ARK_MANAGER:-/home/arkadmin/ark-manager/ark-manager.sh}
+ARK_RCON_PORT=${ARK_RCON_PORT:-27020}
 ARK_RCON_PASSWORD=
-ARK_MAX_PLAYERS=70
-ARK_RAM_ALLOC=16
+ARK_MAX_PLAYERS=${ARK_MAX_PLAYERS:-70}
+ARK_RAM_ALLOC=${ARK_RAM_ALLOC:-16}
 PORT=8787
 # 0.0.0.0 is container-internal: Docker publishes ${HOST_PORT} on the host and
 # cannot reach a process bound to the container's loopback. Exposure is limited
@@ -56,11 +77,11 @@ BIND=0.0.0.0
 DASH_USER=${DASH_USER}
 DASH_PASS=${DASH_PW}
 POLL_INTERVAL_MS=6000
-UNIFI_HOST=10.0.0.1
+UNIFI_HOST=${UNIFI_HOST:-}
 UNIFI_API_KEY=${UNIFI_KEY}
-UNIFI_SITE=default
-ARK_VM_IP=10.0.0.50
-UNIFI_FORWARD_PROTO=udp
+UNIFI_SITE=${UNIFI_SITE:-default}
+ARK_VM_IP=${ARK_VM_IP:-}
+UNIFI_FORWARD_PROTO=${UNIFI_FORWARD_PROTO:-udp}
 ENV
 ssh "$TARGET" "chmod 600 $REMOTE_DIR/deploy/.env"
 

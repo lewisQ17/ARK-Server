@@ -6,3 +6,4 @@ node_modules/
 backend/.env
 deploy/.env
 .claude/
+deploy/site.env
