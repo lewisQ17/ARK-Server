@@ -19,7 +19,7 @@ class Proxmox {
   constructor(cfg) {
     this.base = `https://${cfg.host}:${cfg.port || 8006}/api2/json`;
     this.node = cfg.node;              // Proxmox node name, e.g. 'pve'
-    this.vmid = cfg.vmid;              // from PVE_VMID
+    this.vmid = cfg.vmid;              // numeric VM id, from PVE_VMID
     this.user = cfg.user || 'root@pam';
     this.password = cfg.password;
     this._ticket = null;

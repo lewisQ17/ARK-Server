@@ -11,7 +11,12 @@ sudo ./install.sh
 ```
 
 That's it. The installer walks you through the rest and prints your login details
-at the end (also saved to `/root/ark-install-summary.txt`).
+at the end (also saved to `/root/ark-install-summary.txt`). Nothing needs to be
+configured by hand for this path.
+
+> Running the game server in a **Proxmox VM** instead, with the dashboard elsewhere?
+> That mode needs your own connection details — no addresses ship in this repo.
+> See [dashboard/README.md](dashboard/README.md#setup--what-you-have-to-fill-in).
 
 ## What the installer does
 

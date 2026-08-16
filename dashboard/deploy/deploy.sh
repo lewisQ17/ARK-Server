@@ -32,6 +32,16 @@ for v in PVE_HOST PVE_NODE PVE_VMID ARK_SERVICE PVE_PW_KEY; do
   [ -n "${!v:-}" ] || { echo "error: $v is empty in $SITE_ENV" >&2; exit 1; }
 done
 
+# The backend pins the PVE certificate and fails closed without it, so catch that
+# here instead of after a deploy that cannot start.
+if [ -z "${PVE_TLS_FINGERPRINT:-}" ] && [ "${PVE_TLS_INSECURE:-}" != "1" ]; then
+  echo "error: PVE_TLS_FINGERPRINT is empty in $SITE_ENV." >&2
+  echo "       get it with:" >&2
+  echo "         echo | openssl s_client -connect ${PVE_HOST}:${PVE_PORT:-8006} 2>/dev/null | openssl x509 -fingerprint -sha256 -noout" >&2
+  echo "       or set PVE_TLS_INSECURE=1 to deploy without pinning (testing only)." >&2
+  exit 1
+fi
+
 echo "→ syncing $PROJ to $TARGET:$REMOTE_DIR"
 ssh "$TARGET" "mkdir -p $REMOTE_DIR/deploy"
 rsync -az --delete \
@@ -62,6 +72,8 @@ PVE_NODE=${PVE_NODE}
 PVE_VMID=${PVE_VMID}
 PVE_USER=${PVE_USER:-root@pam}
 PVE_PASSWORD=${PVE_PW}
+PVE_TLS_FINGERPRINT=${PVE_TLS_FINGERPRINT:-}
+PVE_TLS_INSECURE=${PVE_TLS_INSECURE:-}
 ARK_SERVICE=${ARK_SERVICE}
 ARK_USER=${ARK_USER:-arkadmin}
 ARK_MANAGER=${ARK_MANAGER:-/home/arkadmin/ark-manager/ark-manager.sh}
@@ -82,6 +94,8 @@ UNIFI_API_KEY=${UNIFI_KEY}
 UNIFI_SITE=${UNIFI_SITE:-default}
 ARK_VM_IP=${ARK_VM_IP:-}
 UNIFI_FORWARD_PROTO=${UNIFI_FORWARD_PROTO:-udp}
+UNIFI_TLS_FINGERPRINT=${UNIFI_TLS_FINGERPRINT:-}
+UNIFI_TLS_INSECURE=${UNIFI_TLS_INSECURE:-}
 ENV
 ssh "$TARGET" "chmod 600 $REMOTE_DIR/deploy/.env"
 
