@@ -3,6 +3,10 @@
 Live web dashboard for an ARK: Survival Ascended server: status, players, RCON,
 config, logs and backups from the browser.
 
+> **First time here?** No addresses ship in this repo, so anything beyond `local`
+> mode needs your own values first. [Setup — what you have to fill in](#setup--what-you-have-to-fill-in)
+> lists every one of them, and where to find it.
+
 ## Two modes
 
 | `ARK_EXEC_MODE` | When | How it reaches the server |
@@ -63,7 +67,8 @@ Then fill in:
 Get the fingerprint (replace the host and port with your own):
 
 ```bash
-echo | openssl s_client -connect YOUR_PVE_HOST:8006 2>/dev/null   | openssl x509 -fingerprint -sha256 -noout
+echo | openssl s_client -connect YOUR_PVE_HOST:8006 2>/dev/null \
+  | openssl x509 -fingerprint -sha256 -noout
 ```
 
 Paste the value after `sha256 Fingerprint=` — with or without colons, both parse.
