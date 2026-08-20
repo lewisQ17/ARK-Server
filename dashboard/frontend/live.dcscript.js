@@ -629,8 +629,13 @@ class Component extends DCLogic {
         {k:'CPU',sub:(selectedInst.coresAlloc!=null?(selectedInst.coresAlloc+' vCPU cap'):'host VM'),big:selectedInst.cpuStr,unit:'',pct:idle?0:(parseInt(selectedInst.cpuStr)||0),alloc:'host VM',color:'#37D3C3',flag:null},
         (function(cap,use){ return {k:'Memory',sub:cap+' GB cap',big:use,unit:'GB',pct:Math.round((parseFloat(use)||0)/cap*100),alloc:'of '+cap+' GB',color:'#FF7A2E',flag: idle?'Idle — VM RAM reclaimable':null}; })(selectedInst.ramLimitGB!=null?selectedInst.ramLimitGB:(selectedInst.ramAlloc||16), selectedInst.ramLiveGB!=null?selectedInst.ramLiveGB:selectedInst.ramUsed),
         {k:'Disk',sub:'VM disk',big:host.diskUsed!=null?host.diskUsed:'—',unit:host.diskUsed!=null?'GB':'',pct:host.diskTotal?Math.round(host.diskUsed/host.diskTotal*100):0,alloc:host.diskTotal?('of '+host.diskTotal+' GB'):'—',color:'#8C7BF7',flag:null},
-        {k:'Network',sub:'in / out',big:idle?'0':((((host.netin||0)+(host.netout||0))/125000).toFixed(1)),unit:'Mb/s',pct:idle?0:20,alloc:((host.netin||0)/125000).toFixed(1)+' Mb/s in',color:'#37D67A',flag:null}
-      ].map(m=>({...m, barStyle:{height:'100%',width:Math.max(2,m.pct)+'%',borderRadius:'99px',background:m.color,transition:'width .5s ease'}})),
+        // De vulbalk stond hier vast op 20% zodra de server niet idle was: dat las als een gemeten
+        // netwerkbelasting, maar er is geen bekende linkcapaciteit om tegen af te zetten. Het
+        // getal in Mb/s is wel echt; de balk blijft daarom leeg (pct null = geen balk).
+        {k:'Network',sub:'in / out',big:idle?'0':((((host.netin||0)+(host.netout||0))/125000).toFixed(1)),unit:'Mb/s',pct:null,alloc:((host.netin||0)/125000).toFixed(1)+' Mb/s in',color:'#37D67A',flag:null}
+      ].map(m=>({...m, barStyle: m.pct==null
+        ? {height:'100%',width:'0%',borderRadius:'99px',background:'transparent'}
+        : {height:'100%',width:Math.max(2,m.pct)+'%',borderRadius:'99px',background:m.color,transition:'width .5s ease'}})),
       healthColor: selectedInst.isRunning?'var(--green)':(selectedInst.isStarting?'var(--amber)':'var(--blue)'),
       healthLabel: selectedInst.isRunning?'Healthy':(selectedInst.isStarting?'Booting':'Offline'),
       mult: effMultipliers((selectedInst.config||{}).multipliers, s.cfgOverride, {}).map(m=>({...m, valColor:m.hot?'var(--ember)':'var(--text)', barStyle:{height:'100%',width:Math.max(2,m.pct)+'%',borderRadius:'99px',background:m.hot?'linear-gradient(90deg,var(--ember),var(--ember2))':'var(--cyan)'}})),
@@ -715,7 +720,13 @@ class Component extends DCLogic {
     const effMode = _ov.ServerPVE!=null ? (/^true$/i.test(_ov.ServerPVE)?'PvE':'PvP') : _rules.mode;
     const effThird = _ov.AllowThirdPersonPlayer!=null ? /^true$/i.test(_ov.AllowThirdPersonPlayer) : _rules.thirdPerson;
     const effFlyer = _ov.AllowFlyerCarryPvE!=null ? /^true$/i.test(_ov.AllowFlyerCarryPvE) : _rules.flyerCarry;
-    const effPlat = Object.assign({PC:true,XSX:true,PS5:true,WINGDK:true}, (_rules.platforms||{}), (s.platformOverride||{}));
+    // Niet uitgelezen platformen zijn ONBEKEND, niet "allemaal toegestaan". Stond hier als
+    // alles-op-true, waardoor het dashboard "crossplay: PC + Xbox + PS5 + Windows Store" toonde
+    // terwijl er niets uit map.conf gelezen was.
+    const _platKnown = _rules.platforms != null;
+    const effPlat = _platKnown
+      ? Object.assign({}, _rules.platforms, (s.platformOverride||{}))
+      : Object.assign({}, (s.platformOverride||{}));
     const _overrides = buildOverrides((selectedInst.config||{}), s.cfgOverride, s.catalog, this);
     return {rootRef:this.rootRef,
       paletteOpen:s.palette, openPalette:()=>this.setState({palette:true}), closePalette:pclose, stopClick:(e)=>e.stopPropagation(),
@@ -851,8 +862,10 @@ class Component extends DCLogic {
       })(this, selectedInst, host, s.computeDraft),
       computeOpen:!!s.computeOpen, toggleCompute:()=>this.toggleCompute(), closeCompute:()=>this.closeCompute(),
       // crossplay per platform (real -ServerPlatform= launch arg) — each badge toggles that platform
-      crossPlatforms:[['PC','Steam'],['XSX','Xbox'],['PS5','PS5'],['WINGDK','Windows']].map(([tok,short])=>{ const on=effPlat[tok]!==false; return {name:short, short, on, toggle:()=>this.togglePlatform(tok, effPlat),
-        style:{fontSize:'11px',fontWeight:600,borderRadius:'7px',padding:'5px 11px',cursor:'pointer',border:'1px solid '+(on?'rgba(55,211,195,.35)':'var(--line2)'),background:on?'rgba(55,211,195,.12)':'var(--surface2)',color:on?'var(--cyan)':'var(--mute)'}, mark:on?'✓ ':'',
+      // Onbekend (map.conf niet gelezen) is niet hetzelfde als "aan": zonder uitgelezen
+      // platformen stonden alle badges op ✓ omdat undefined !== false.
+      crossPlatforms:[['PC','Steam'],['XSX','Xbox'],['PS5','PS5'],['WINGDK','Windows']].map(([tok,short])=>{ const on=_platKnown && effPlat[tok]!==false; return {name:short, short, on, unknown:!_platKnown, toggle:()=>this.togglePlatform(tok, effPlat),
+        style:{fontSize:'11px',fontWeight:600,borderRadius:'7px',padding:'5px 11px',cursor:'pointer',border:'1px solid '+(on?'rgba(55,211,195,.35)':'var(--line2)'),background:on?'rgba(55,211,195,.12)':'var(--surface2)',color:on?'var(--cyan)':'var(--mute)'}, mark:on?'✓ ':(_platKnown?'':'? '),
         miniStyle:{fontSize:'9.5px',fontFamily:'JetBrains Mono,monospace',borderRadius:'5px',padding:'1px 6px',border:'1px solid '+(on?'rgba(55,211,195,.3)':'var(--line2)'),background:on?'rgba(55,211,195,.1)':'var(--surface2)',color:on?'var(--cyan)':'var(--mute)',opacity:on?1:0.5}}; }),
       // game mode + rule toggles (optimistic apply)
       ruleModeIsPve: effMode==='PvE',

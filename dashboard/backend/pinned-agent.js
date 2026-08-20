@@ -27,6 +27,11 @@ function buildPinnedAgent({ label, fingerprint, allowInsecure }) {
   }
   return new Agent({
     connect(opts, callback) {
+      // undici's callback mag exact een keer vuren. Zonder deze guard blijft de
+      // 'error'-listener na een geslaagde connect gewapend, en roept een latere
+      // socketfout hem een tweede keer aan.
+      let settled = false;
+      const settle = (err, sock) => { if (settled) return; settled = true; callback(err, sock); };
       // rejectUnauthorized:false here is intentional and safe: the fingerprint
       // check below REPLACES chain validation for the self-signed cert.
       const socket = tls.connect(
@@ -34,11 +39,11 @@ function buildPinnedAgent({ label, fingerprint, allowInsecure }) {
         { ...opts, host: opts.hostname, port: opts.port || 443, servername: opts.servername || opts.hostname, ALPNProtocols: ['http/1.1'], rejectUnauthorized: false },
         () => {
           const got = (socket.getPeerCertificate().fingerprint256 || '').replace(/:/g, '').toLowerCase();
-          if (got !== want) { socket.destroy(); callback(new Error(`${label}: TLS fingerprint mismatch (got ${got || 'none'})`)); return; }
-          callback(null, socket);
+          if (got !== want) { socket.destroy(); settle(new Error(`${label}: TLS fingerprint mismatch (got ${got || 'none'})`)); return; }
+          settle(null, socket);
         },
       );
-      socket.once('error', callback);
+      socket.once('error', (err) => settle(err));
     },
   });
 }

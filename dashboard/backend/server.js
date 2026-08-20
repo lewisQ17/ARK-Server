@@ -47,7 +47,17 @@ async function syncMaps() {
     discovered = await discoverMaps(pmx, config.ark);
     const ids = new Set();
     for (const m of discovered) {
-      const inst = new ArkInstance(pmx, config.ark, m);
+      // De constructor weigert een onveilige servicenaam (vangnet tegen de
+      // root-escalatie via map-dirnamen). discoverMaps() filtert die namen al
+      // weg, dus dit hoort nooit te vuren — maar als het toch gebeurt, mag een
+      // enkele map niet de hele sync afbreken en het dashboard leegmaken.
+      let inst;
+      try {
+        inst = new ArkInstance(pmx, config.ark, m);
+      } catch (e) {
+        console.error(`[syncMaps] map overgeslagen (${m && m.display}): ${e.message}`);
+        continue;
+      }
       ids.add(inst.id);
       if (!arks[inst.id]) { arks[inst.id] = inst; cache.hist[inst.id] = { cpu: [], ram: [] }; }
       else arks[inst.id]._map = m; // keep latest
