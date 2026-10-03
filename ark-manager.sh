@@ -1480,15 +1480,34 @@ start_map() {
     # via 'ps' voor elke lokale gebruiker leesbaar. ARK leest ServerPassword /
     # ServerAdminPassword / RCON ook uit GameUserSettings.ini [ServerSettings], en dat
     # bestand staat op mode 600 — dus daar (opnieuw) neerzetten en uit argv weglaten.
+    # Fail-closed: ontbrak het bestand of de [ServerSettings]-sectie, dan startte de
+    # server zonder wachtwoord (of belandden de sleutels onder een andere sectie, waar
+    # ARK ze niet leest). Nu maken we bestand en sectie desnoods aan, zetten de sleutels
+    # direct onder [ServerSettings], en starten niet als dat niet lukt.
     local gus_live="$config_dst/GameUserSettings.ini"
-    if [[ -f "$gus_live" ]]; then
-        write_conf_value "$gus_live" "ServerPassword" "$server_pw"
-        write_conf_value "$gus_live" "ServerAdminPassword" "$admin_pw"
-        write_conf_value "$gus_live" "RCONEnabled" "True"
-        write_conf_value "$gus_live" "RCONPort" "$rcon_port"
-        chmod 600 "$gus_live" 2>/dev/null || true
-    else
-        log_warn "No GameUserSettings.ini for '$map' — starting without server/admin password."
+    if [[ "$server_pw$admin_pw" == *$'\n'* ]]; then
+        log_err "Server/admin password for '$map' contains a newline — refusing to start."
+        return 1
+    fi
+    local gus_tmp="$gus_live.tmp.$$"
+    if ! ( umask 077
+           [[ -f "$gus_live" ]] || : > "$gus_live"
+           SP="$server_pw" AP="$admin_pw" RP="$rcon_port" awk '
+               function emit() {
+                   print "ServerPassword=" ENVIRON["SP"]
+                   print "ServerAdminPassword=" ENVIRON["AP"]
+                   print "RCONEnabled=True"
+                   print "RCONPort=" ENVIRON["RP"]
+                   done = 1
+               }
+               /^(ServerPassword|ServerAdminPassword|RCONEnabled|RCONPort)=/ { next }
+               { print }
+               /^\[ServerSettings\][[:space:]]*$/ && !done { emit() }
+               END { if (!done) { print "[ServerSettings]"; emit() } }
+           ' "$gus_live" > "$gus_tmp" && mv -f "$gus_tmp" "$gus_live" && chmod 600 "$gus_live" ); then
+        rm -f "$gus_tmp"
+        log_err "Could not write passwords to GameUserSettings.ini for '$map' — refusing to start without them."
+        return 1
     fi
 
     nice $nice_lvl "$PROTON_DIR/proton" run \
