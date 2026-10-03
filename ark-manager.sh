@@ -119,8 +119,20 @@ read_conf_value() {
 
 write_conf_value() {
     local file="$1" key="$2" value="$3"
+    # De waarde ging ongeescaped als sed-vervangtekst mee: een '|', '&' of '\' in een
+    # wachtwoord of pad veranderde de sed-expressie of injecteerde tekst in het bestand.
+    # Nu escapen we patroon en vervangtekst apart, en weigeren we waarden met een
+    # newline (die passen niet in een key=value-regel).
+    if [[ "$value" == *$'\n'* ]]; then
+        log_err "Value for '$key' contains a newline — refusing to write it."
+        return 1
+    fi
+    local key_re key_repl val_repl
+    key_re=$(printf '%s' "$key" | sed -e 's/[][\\.^$*|/]/\\&/g')
+    key_repl=$(printf '%s' "$key" | sed -e 's/[\\&|]/\\&/g')
+    val_repl=$(printf '%s' "$value" | sed -e 's/[\\&|]/\\&/g')
     if grep -qE "^${key}=" "$file" 2>/dev/null; then
-        sed -i "s|^${key}=.*|${key}=${value}|" "$file"
+        sed -i "s|^${key_re}=.*|${key_repl}=${val_repl}|" "$file"
     else
         echo "${key}=${value}" >> "$file"
     fi
@@ -213,12 +225,25 @@ install_server() {
     fi
 
     log_info "Downloading / Updating ARK (AppID ${BLD}$ARK_APPID${R})..."
+    # De exit-status van SteamCMD werd genegeerd: na een mislukte of halve download
+    # meldde install.sh alsnog "Server files installed". Nu controleren we de status
+    # (en of de server-binary er echt staat) en falen we hard.
+    local steam_rc=0
     "$STEAMCMD_DIR/steamcmd.sh" \
         +force_install_dir "$SERVER_DIR" \
         +login anonymous \
         +@sSteamCmdForcePlatformType windows \
         +app_update $ARK_APPID validate \
-        +quit
+        +quit || steam_rc=$?
+    if (( steam_rc != 0 )); then
+        log_err "SteamCMD exited with status ${BLD}$steam_rc${R} — the server files are incomplete."
+        log_err "Fix the cause (disk space / network) and run install again."
+        return 1
+    fi
+    if [[ ! -f "$SERVER_DIR/ShooterGame/Binaries/Win64/ArkAscendedServer.exe" ]]; then
+        log_err "SteamCMD reported success but ArkAscendedServer.exe is missing — install incomplete."
+        return 1
+    fi
 
     local pdb_count
     pdb_count=$(find "$SERVER_DIR" -name "*.pdb" 2>/dev/null | wc -l)
@@ -256,25 +281,39 @@ get_maps() {
     echo "${maps[@]}"
 }
 
+# Het patroon was niet geankerd: 'AltSaveDirectoryName=Ragnarok' matchte ook het
+# proces van 'Ragnarok2', waardoor twee maps als dezelfde werden gezien. Nu moet de
+# mapnaam het einde van dat argument zijn: gevolgd door een spatie (het volgende
+# argument) of het einde van de commandline.
 is_map_running() {
     local map="$1"
     local save_dir
     save_dir=$(read_conf_value "$MAPS_DIR/$map/map.conf" "SaveDir" "$map")
-    pgrep -f "ArkAscendedServer.exe.*AltSaveDirectoryName=${save_dir}" &>/dev/null
+    pgrep -f "ArkAscendedServer\.exe.*AltSaveDirectoryName=${save_dir}( |\$)" &>/dev/null
 }
 
 get_map_pid() {
     local map="$1"
     local save_dir
     save_dir=$(read_conf_value "$MAPS_DIR/$map/map.conf" "SaveDir" "$map")
-    pgrep -f "ArkAscendedServer.exe.*AltSaveDirectoryName=${save_dir}" 2>/dev/null | head -1
+    pgrep -f "ArkAscendedServer\.exe.*AltSaveDirectoryName=${save_dir}( |\$)" 2>/dev/null | head -1
 }
 
 get_player_count() {
     local map="$1"
     is_map_running "$map" || { echo "0"; return; }
     # Cache for 30 seconds (RCON call is slow)
-    local cache_file="/tmp/.ark-players-${map}"
+    # Het cachepad was voorspelbaar (/tmp/.ark-players-<map>): elke lokale gebruiker kon
+    # het vooraf aanmaken of als symlink neerzetten, en zo de getoonde waarde bepalen of
+    # onze schrijfactie naar een ander bestand omleiden. Nu een private dir per uid met
+    # eigenaarscontrole; is die niet van ons, dan cachen we niet (/dev/null).
+    local cache_dir cache_file="/dev/null"
+    cache_dir="${TMPDIR:-/tmp}/.ark-cache-$(id -u)"
+    if mkdir -p -m 700 "$cache_dir" 2>/dev/null && [[ -d "$cache_dir" && ! -L "$cache_dir" && -O "$cache_dir" ]]; then
+        chmod 700 "$cache_dir" 2>/dev/null || true
+        cache_file="$cache_dir/players-${map}"
+        [[ -L "$cache_file" ]] && rm -f "$cache_file"
+    fi
     if [[ -f "$cache_file" ]]; then
         local now mtime age
         now=$(date +%s)
@@ -353,7 +392,9 @@ get_map_memory() {
     while IFS= read -r pid; do
         local rss; rss=$(ps -o rss= -p "$pid" 2>/dev/null | tr -d ' ')
         (( total_kb += ${rss:-0} ))
-    done < <(pgrep -f "AltSaveDirectoryName=${save_dir}" 2>/dev/null)
+    done < <(pgrep -f "AltSaveDirectoryName=${save_dir}( |\$)" 2>/dev/null)
+    # Ankering (spatie of einde commandline): zonder anker telde 'Ragnarok' ook het
+    # RAM van 'Ragnarok2' mee.
     (( total_kb == 0 )) && { echo "-"; return; }
     local mb=$(( total_kb / 1024 ))
     if (( mb > 1024 )); then
@@ -384,7 +425,9 @@ get_map_cpu() {
     # Method 2: pgrep
     local save_dir; save_dir=$(read_conf_value "$MAPS_DIR/$map/map.conf" "SaveDir" "$map")
     local total
-    total=$(pgrep -f "AltSaveDirectoryName=${save_dir}" 2>/dev/null | \
+    # Ankering (spatie of einde commandline): zonder anker telde 'Ragnarok' ook de CPU
+    # van 'Ragnarok2' mee.
+    total=$(pgrep -f "AltSaveDirectoryName=${save_dir}( |\$)" 2>/dev/null | \
         xargs -I{} ps -o %cpu= -p {} 2>/dev/null | \
         awk '{s+=$1}END{printf "%.0f", s}' 2>/dev/null)
     echo "${total:-0}%"
@@ -394,8 +437,20 @@ get_map_cpu() {
 get_system_cpu() {
     local cur prev
     cur=$(awk '/^cpu /{printf "%d %d", $2+$3+$4, $2+$3+$4+$5+$6+$7+$8}' /proc/stat 2>/dev/null) || { echo "?"; return; }
-    prev=$(cat /tmp/.ark-sys-cpu 2>/dev/null) || prev="$cur"
-    echo "$cur" > /tmp/.ark-sys-cpu
+    # /tmp/.ark-sys-cpu was een vast, voorspelbaar pad: elke lokale gebruiker kon daar een
+    # symlink neerzetten en zo deze (soms als root draaiende) schrijfactie naar een
+    # willekeurig bestand laten gaan. Nu een private dir per uid met eigenaarscontrole;
+    # lukt dat niet, dan houden we geen state bij (/dev/null).
+    local state_dir state_file="/dev/null"
+    state_dir="${TMPDIR:-/tmp}/.ark-cache-$(id -u)"
+    if mkdir -p -m 700 "$state_dir" 2>/dev/null && [[ -d "$state_dir" && ! -L "$state_dir" && -O "$state_dir" ]]; then
+        chmod 700 "$state_dir" 2>/dev/null || true
+        state_file="$state_dir/sys-cpu"
+        [[ -L "$state_file" ]] && rm -f "$state_file"
+    fi
+    prev=$(cat "$state_file" 2>/dev/null) || prev="$cur"
+    [[ -z "$prev" ]] && prev="$cur"
+    echo "$cur" > "$state_file"
     echo "$prev $cur" | awk '{db=$3-$1; dt=$4-$2; if(dt>0) printf "%.0f", 100*db/dt; else print "0"}'
 }
 
@@ -405,7 +460,16 @@ check_server_queryable() {
     is_map_running "$map" || { echo "-"; return; }
 
     # Cache result for 15 seconds
-    local cache_file="/tmp/.ark-join-${map}"
+    # Zelfde probleem als bij de player-cache: /tmp/.ark-join-<map> was voorspelbaar en
+    # door iedere lokale gebruiker vooraf te vullen (of te symlinken). Nu een private dir
+    # per uid met eigenaarscontrole; anders niet cachen (/dev/null slikt de tee).
+    local cache_dir cache_file="/dev/null"
+    cache_dir="${TMPDIR:-/tmp}/.ark-cache-$(id -u)"
+    if mkdir -p -m 700 "$cache_dir" 2>/dev/null && [[ -d "$cache_dir" && ! -L "$cache_dir" && -O "$cache_dir" ]]; then
+        chmod 700 "$cache_dir" 2>/dev/null || true
+        cache_file="$cache_dir/join-${map}"
+        [[ -L "$cache_file" ]] && rm -f "$cache_file"
+    fi
     if [[ -f "$cache_file" ]]; then
         local now mtime age
         now=$(date +%s)
@@ -616,9 +680,20 @@ add_map() {
         echo -n "  ${WHT}Display name (e.g. MyMap): ${R}"
         read -r display_name
         [[ -z "$display_name" ]] && return 0
+        # Een naam met een spatie (of quote/slash) brak de manager stil: get_maps levert
+        # de mapnamen spatie-gescheiden op, dus "My Map" werd twee fantoom-maps, en de
+        # naam gaat ook ongefilterd in een als root geschreven systemd-unit.
+        if [[ ! "$display_name" =~ ^[A-Za-z0-9_]+$ ]]; then
+            FEEDBACK="${RED}${BLD}✖${R} Invalid name '${display_name}' — only letters, digits and _ (no spaces)."
+            return 1
+        fi
         echo -n "  ${WHT}Internal map name (e.g. MyMap_WP): ${R}"
         read -r internal_name
         [[ -z "$internal_name" ]] && return 0
+        if [[ ! "$internal_name" =~ ^[A-Za-z0-9_]+$ ]]; then
+            FEEDBACK="${RED}${BLD}✖${R} Invalid internal name '${internal_name}' — only letters, digits and _."
+            return 1
+        fi
     else
         FEEDBACK="${RED}${BLD}✖${R} Invalid selection."
         return 1
@@ -736,6 +811,14 @@ add_map_cli() {
         esac
     done
 
+    # Deze CLI-route valideerde de naam niet (het menu doet dat wel): de naam belandt in
+    # paden, in een als root geschreven systemd-unit en in de start-commandline. Zelfde
+    # regel als in het menu: alleen letters, cijfers en _.
+    if [[ ! "$display_name" =~ ^[A-Za-z0-9_]+$ ]]; then
+        log_err "Invalid map name '$display_name' — only letters, digits and _ are allowed, no spaces."
+        return 1
+    fi
+
     if [[ -d "$MAPS_DIR/$display_name" ]]; then
         log_ok "Map '$display_name' already exists — nothing to do."
         return 0
@@ -748,6 +831,10 @@ add_map_cli() {
             log_err "'$display_name' is not a known map. Pass --internal <InternalName> (e.g. MyMap_WP)."
             return 1
         }
+    fi
+    if [[ ! "$internal_name" =~ ^[A-Za-z0-9_]+$ ]]; then
+        log_err "Invalid internal map name '$internal_name' — only letters, digits and _ are allowed."
+        return 1
     fi
 
     # Defaults from server-defaults.conf, then auto-increment past existing maps.
@@ -1111,7 +1198,21 @@ open_firewall_ports() {
         "${SUDO[@]}" ufw allow "${game_port}/udp" 2>/dev/null || true
         "${SUDO[@]}" ufw allow "$(( game_port + 1 ))/udp" 2>/dev/null || true
         "${SUDO[@]}" ufw allow "${query_port}/udp" 2>/dev/null || true
-        "${SUDO[@]}" ufw allow "${rcon_port}/tcp" 2>/dev/null || true
+        # De RCON-poort werd hier voor de hele wereld opengezet ('ufw allow <port>/tcp'),
+        # terwijl README en installer localhost-only beloven. Loopback heeft geen
+        # ufw-regel nodig; alleen het eigen private LAN-subnet krijgt toegang, en kan dat
+        # niet bepaald worden dan blijft RCON puur localhost. Een eerder aangemaakte
+        # wereldwijde regel wordt hier ook opgeruimd.
+        "${SUDO[@]}" ufw delete allow "${rcon_port}/tcp" 2>/dev/null || true
+        local lan_cidr=""
+        lan_cidr=$(ip -o -f inet route show scope link 2>/dev/null | \
+            awk '$1 ~ /^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/ {print $1; exit}')
+        if [[ -n "$lan_cidr" ]]; then
+            "${SUDO[@]}" ufw allow from "$lan_cidr" to any port "${rcon_port}" proto tcp 2>/dev/null || true
+            log_info "RCON ${BLD}${rcon_port}/tcp${R} allowed from ${BLD}${lan_cidr}${R} only, never from the internet."
+        else
+            log_info "RCON ${BLD}${rcon_port}/tcp${R} left closed in the firewall — localhost only."
+        fi
     fi
 }
 
@@ -1346,11 +1447,21 @@ start_map() {
     export SteamAppId=$ARK_APPID
     export SteamGameId=$ARK_APPID
 
+    # Hier werd bij elke start EEN globale symlink (Saved/Config/WindowsServer ->
+    # maps/<map>) herlegd, zonder per-map component. Bij meerdere maps wees die dus naar
+    # de laatst gestarte map: gameplay-settings lekten over en de config-write-back bij
+    # afsluiten overschreef de ini's van een ANDERE map. Nu blijft maps/<map>/*.ini de
+    # bron van deze map en zetten we alleen een werkkopie op de engine-locatie, zodat
+    # geen enkele map nog in de config van een andere map schrijft.
     local config_src="$MAPS_DIR/$map"
     local config_dst="$SERVER_DIR/ShooterGame/Saved/Config/WindowsServer"
-    [[ -d "$config_dst" && ! -L "$config_dst" ]] && mv "$config_dst" "${config_dst}.bak.$(date +%s)" || true
-    rm -f "$config_dst"
-    ln -s "$config_src" "$config_dst"
+    [[ -L "$config_dst" ]] && rm -f "$config_dst"
+    mkdir -p "$config_dst"
+    local ini
+    for ini in "$config_src"/*.ini; do
+        [[ -f "$ini" ]] || continue
+        cp -f "$ini" "$config_dst/$(basename "$ini")"
+    done
     mkdir -p "$SERVER_DIR/ShooterGame/Saved/SavedArks/$save_dir"
 
     local cluster_args=""
@@ -1365,9 +1476,24 @@ start_map() {
     [[ "$use_null" == "true" ]] && nullrhi="-nullrhi"
     local nice_lvl; nice_lvl=$(read_conf_value "$OPT_CONF" "ServerNiceLevel" "-5")
 
+    # Admin- en serverwachtwoord stonden permanent in de process-commandline en waren dus
+    # via 'ps' voor elke lokale gebruiker leesbaar. ARK leest ServerPassword /
+    # ServerAdminPassword / RCON ook uit GameUserSettings.ini [ServerSettings], en dat
+    # bestand staat op mode 600 — dus daar (opnieuw) neerzetten en uit argv weglaten.
+    local gus_live="$config_dst/GameUserSettings.ini"
+    if [[ -f "$gus_live" ]]; then
+        write_conf_value "$gus_live" "ServerPassword" "$server_pw"
+        write_conf_value "$gus_live" "ServerAdminPassword" "$admin_pw"
+        write_conf_value "$gus_live" "RCONEnabled" "True"
+        write_conf_value "$gus_live" "RCONPort" "$rcon_port"
+        chmod 600 "$gus_live" 2>/dev/null || true
+    else
+        log_warn "No GameUserSettings.ini for '$map' — starting without server/admin password."
+    fi
+
     nice $nice_lvl "$PROTON_DIR/proton" run \
         "$SERVER_DIR/ShooterGame/Binaries/Win64/ArkAscendedServer.exe" \
-        "${map_name}?listen?SessionName=${map} ?ServerPassword=${server_pw}?RCONEnabled=True?ServerAdminPassword=${admin_pw}?AltSaveDirectoryName=${save_dir}" \
+        "${map_name}?listen?SessionName=${map}?AltSaveDirectoryName=${save_dir}" \
         $custom_params $nullrhi \
         -WinLiveMaxPlayers=$max_players \
         -Port=$game_port -QueryPort=$query_port -RCONPort=$rcon_port \
@@ -1392,22 +1518,47 @@ stop_map() {
     rcon_port=$(read_conf_value "$conf" "RCONPort" "27020")
 
     log_info "Stopping map '${BLD}$map${R}'..."
+    # Twee fouten hier: (1) het pgrep/pkill-patroon was niet geankerd, dus 'Ragnarok'
+    # matchte ook 'Ragnarok2' en 'stop Ragnarok' kon die andere map hard killen; (2) na
+    # een mislukte RCON volgde al na 3s SIGKILL en werd tóch "stopped" gelogd, terwijl
+    # ARK bij SIGKILL niets opslaat — stil wereld-verlies. Nu geankerd, ruimer wachten,
+    # en een force-kill wordt als fout gerapporteerd (return 1).
+    local proc_pat="ArkAscendedServer\.exe.*AltSaveDirectoryName=${save_dir}( |\$)"
+    local stop_rc=0
     local response=""
     response=$(python3 "$RCON_SCRIPT" "localhost:$rcon_port" -p "$admin_pw" -c "DoExit" 2>/dev/null || echo "")
     if [[ "$response" == *"Exiting"* ]]; then
         log_info "Waiting for graceful shutdown..."
         local waited=0
-        while pgrep -f "ArkAscendedServer.exe.*AltSaveDirectoryName=${save_dir}" &>/dev/null; do
+        while pgrep -f "$proc_pat" &>/dev/null; do
             sleep 2; (( waited += 2 ))
-            (( waited >= 120 )) && { log_warn "Timeout. Force killing..."; pkill -9 -f "ArkAscendedServer.exe.*AltSaveDirectoryName=${save_dir}" || true; break; }
+            (( waited >= 120 )) && {
+                log_err "Timeout after ${waited}s — sending SIGKILL. The world save is probably incomplete."
+                pkill -9 -f "$proc_pat" || true
+                stop_rc=1
+                break
+            }
         done
     else
-        log_warn "RCON failed. Force stopping..."
-        pkill -f "ArkAscendedServer.exe.*AltSaveDirectoryName=${save_dir}" || true
-        sleep 3
-        pkill -9 -f "ArkAscendedServer.exe.*AltSaveDirectoryName=${save_dir}" 2>/dev/null || true
+        log_warn "RCON gave no 'Exiting' reply — falling back to a signal-based stop."
+        pkill -f "$proc_pat" || true
+        local waited=0
+        while pgrep -f "$proc_pat" &>/dev/null && (( waited < 30 )); do
+            sleep 2; (( waited += 2 ))
+        done
+        if pgrep -f "$proc_pat" &>/dev/null; then
+            log_err "Map '$map' still alive after ${waited}s — sending SIGKILL. NO world save was written; the last autosave is the newest data."
+            pkill -9 -f "$proc_pat" 2>/dev/null || true
+            stop_rc=1
+        else
+            log_warn "Map '$map' exited on SIGTERM without an RCON confirmation — check maps/$map/server.log to verify the world was saved."
+        fi
     fi
-    pkill -f "wineserver.*${save_dir}" 2>/dev/null || true
+    pkill -f "wineserver.*${save_dir}( |\$)" 2>/dev/null || true
+    if (( stop_rc != 0 )); then
+        log_err "Map '${BLD}$map${R}${RED}' was force-stopped, not saved. Restore a backup if the world looks wrong."
+        return 1
+    fi
     log_ok "Map '${BLD}$map${R}${GRN}' stopped."
 }
 
@@ -1827,30 +1978,51 @@ LREOF
 }
 
 setup_healthcheck() {
-    local hc_script="$SCRIPT_DIR/healthcheck.sh"
-    cat > "$hc_script" <<'HCEOF'
+    # Dit script werd in $SCRIPT_DIR gezet — een directory die install.sh volledig aan de
+    # onprivilegieerde servicegebruiker chownt — en in de crontab van de aanroeper. Na een
+    # 'sudo ark-manager.sh install' stond er dus een root-cron naar een script dat die
+    # gebruiker kan herschrijven: lokale root-escalatie. Nu root:root 0755 in een
+    # root-eigen directory, met het logbestand daar ook (root mag niet appenden in een pad
+    # dat de servicegebruiker door een symlink kan vervangen).
+    local hc_dir="/usr/local/lib/ark-server"
+    local hc_script="$hc_dir/healthcheck.sh"
+    if ! "${SUDO[@]}" mkdir -p "$hc_dir" 2>/dev/null; then
+        log_warn "Cannot create '$hc_dir' (needs root) — healthcheck cron not installed."
+        return 1
+    fi
+    "${SUDO[@]}" chown root:root "$hc_dir" 2>/dev/null || true
+    "${SUDO[@]}" chmod 0755 "$hc_dir" 2>/dev/null || true
+    # MAPS_DIR wordt hier vastgelegd: het script staat niet meer naast maps/, dus
+    # zelf-lokaliseren via realpath "$0" zou de verkeerde directory opleveren.
+    if ! "${SUDO[@]}" tee "$hc_script" > /dev/null <<HCEOF
 #!/usr/bin/env bash
-SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
-MAPS_DIR="$SCRIPT_DIR/maps"
-LOG="$SCRIPT_DIR/healthcheck.log"
+# Generated by ark-manager.sh — regenerated on every optimization run; do not edit.
+MAPS_DIR="$MAPS_DIR"
+LOG="$hc_dir/healthcheck.log"
 command -v systemctl &>/dev/null || exit 0
-for map_dir in "$MAPS_DIR"/*/; do
-    [[ -d "$map_dir" ]] || continue
-    map=$(basename "$map_dir")
-    conf="$map_dir/map.conf"
-    [[ -f "$conf" ]] || continue
-    service_name="ark-${map,,}.service"
-    systemctl is-enabled "$service_name" &>/dev/null || continue
-    if ! systemctl is-active "$service_name" &>/dev/null; then
-        echo "$(date '+%Y-%m-%d %H:%M:%S') [HEAL] $map down, restarting..." >> "$LOG"
-        systemctl restart "$service_name" 2>/dev/null || true
+for map_dir in "\$MAPS_DIR"/*/; do
+    [[ -d "\$map_dir" ]] || continue
+    map=\$(basename "\$map_dir")
+    conf="\$map_dir/map.conf"
+    [[ -f "\$conf" ]] || continue
+    service_name="ark-\${map,,}.service"
+    systemctl is-enabled "\$service_name" &>/dev/null || continue
+    if ! systemctl is-active "\$service_name" &>/dev/null; then
+        echo "\$(date '+%Y-%m-%d %H:%M:%S') [HEAL] \$map down, restarting..." >> "\$LOG"
+        systemctl restart "\$service_name" 2>/dev/null || true
     fi
 done
 HCEOF
-    chmod +x "$hc_script"
+    then
+        log_warn "Cannot write '$hc_script' (needs root) — healthcheck cron not installed."
+        return 1
+    fi
+    "${SUDO[@]}" chown root:root "$hc_script" 2>/dev/null || true
+    "${SUDO[@]}" chmod 0755 "$hc_script" 2>/dev/null || true
     local cron_line="*/5 * * * * $hc_script"
-    crontab -l 2>/dev/null | grep -qF "$hc_script" || \
-        (crontab -l 2>/dev/null; echo "$cron_line") | crontab -
+    # Ruim ook de oude, onveilige regel op als die er nog staat.
+    crontab -l 2>/dev/null | grep -vF -e "$SCRIPT_DIR/healthcheck.sh" -e "$hc_script" \
+        | { cat; echo "$cron_line"; } | crontab -
 }
 
 #═══════════════════════════════════════════════════════════════════════════════
@@ -1867,17 +2039,52 @@ setup_scheduled_restart() {
     restart_time="${restart_time:-04:00}"
     [[ "$restart_time" == "0" ]] && return 0
 
-    local hour minute
-    hour=$(echo "$restart_time" | cut -d: -f1)
-    minute=$(echo "$restart_time" | cut -d: -f2)
+    # "08" en "09" werden als OCTAAL gelezen: (( 08 )) faalt, waardoor een herstart om
+    # 08:xx of xx:08 stil niet werd ingesteld. Nu eerst het formaat valideren (anders
+    # belandt er onzin in de crontab) en daarna decimaal forceren met 10#.
+    if [[ ! "$restart_time" =~ ^([0-9]{1,2}):([0-9]{2})$ ]]; then
+        log_err "Invalid time '$restart_time' — use HH:MM (24h)."
+        sleep 2
+        return 1
+    fi
+    local hour=$(( 10#${BASH_REMATCH[1]} ))
+    local minute=$(( 10#${BASH_REMATCH[2]} ))
+    if (( hour > 23 || minute > 59 )); then
+        log_err "Invalid time '$restart_time' — hour must be 0-23, minute 0-59."
+        sleep 2
+        return 1
+    fi
 
-    local rs_script="$SCRIPT_DIR/scheduled-restart.sh"
-    cat > "$rs_script" <<RSEOF
+    # Zelfde escalatiepad als bij de healthcheck: dit script stond in $SCRIPT_DIR (van de
+    # onprivilegieerde servicegebruiker) terwijl de crontab-regel van root kan zijn. Nu
+    # root:root 0755 in een root-eigen directory. Bovendien draait de wrapper
+    # ark-manager.sh nooit als root: dat bestand is eigendom van de servicegebruiker, dus
+    # als root uitvoeren zou de escalatie alleen verplaatsen.
+    local rs_dir="/usr/local/lib/ark-server"
+    local rs_script="$rs_dir/scheduled-restart.sh"
+    if ! "${SUDO[@]}" mkdir -p "$rs_dir" 2>/dev/null; then
+        log_err "Cannot create '$rs_dir' (needs root) — scheduled restart not installed."
+        sleep 2
+        return 1
+    fi
+    "${SUDO[@]}" chown root:root "$rs_dir" 2>/dev/null || true
+    "${SUDO[@]}" chmod 0755 "$rs_dir" 2>/dev/null || true
+    if ! "${SUDO[@]}" tee "$rs_script" > /dev/null <<RSEOF
 #!/usr/bin/env bash
-SCRIPT_DIR="\$(cd "\$(dirname "\$(realpath "\$0")")" && pwd)"
-MANAGER="\$SCRIPT_DIR/ark-manager.sh"
-LOG="\$SCRIPT_DIR/restart.log"
-announce() { \$MANAGER broadcast "\$1" 2>/dev/null; echo "\$(date '+%Y-%m-%d %H:%M:%S') [RESTART] \$1" >> "\$LOG"; }
+# Generated by ark-manager.sh — regenerated when you set the schedule; do not edit.
+MANAGER="$SCRIPT_DIR/ark-manager.sh"
+LOG="$rs_dir/restart.log"
+run_manager() {
+    if [[ \$(id -u) -eq 0 ]]; then
+        local owner; owner=\$(stat -c %U "\$MANAGER" 2>/dev/null || echo root)
+        if [[ -n "\$owner" && "\$owner" != "root" ]]; then
+            sudo -n -u "\$owner" -- "\$MANAGER" "\$@"
+            return
+        fi
+    fi
+    "\$MANAGER" "\$@"
+}
+announce() { run_manager broadcast "\$1" 2>/dev/null; echo "\$(date '+%Y-%m-%d %H:%M:%S') [RESTART] \$1" >> "\$LOG"; }
 announce "Server restart in 30 minutes!"
 sleep 1200
 announce "Server restart in 10 minutes!"
@@ -1886,15 +2093,22 @@ announce "Server restart in 3 minutes! Save your progress!"
 sleep 170
 announce "Server restart in 10 seconds!"
 sleep 10
-\$MANAGER stop-all; sleep 10; \$MANAGER start-all
+run_manager stop-all; sleep 10; run_manager start-all
 echo "\$(date '+%Y-%m-%d %H:%M:%S') [RESTART] Complete." >> "\$LOG"
 RSEOF
-    chmod +x "$rs_script"
+    then
+        log_err "Cannot write '$rs_script' (needs root) — scheduled restart not installed."
+        sleep 2
+        return 1
+    fi
+    "${SUDO[@]}" chown root:root "$rs_script" 2>/dev/null || true
+    "${SUDO[@]}" chmod 0755 "$rs_script" 2>/dev/null || true
 
-    local cron_min=$(( (minute - 30 + 60) % 60 ))
-    local cron_hour=$hour
-    (( minute < 30 )) && cron_hour=$(( (hour - 1 + 24) % 24 ))
-    crontab -l 2>/dev/null | grep -vF "scheduled-restart.sh" | { cat; echo "$cron_min $cron_hour * * * $rs_script"; } | crontab -
+    local cron_min=$(( (10#$minute - 30 + 60) % 60 ))
+    local cron_hour=$(( 10#$hour ))
+    (( 10#$minute < 30 )) && cron_hour=$(( (10#$hour - 1 + 24) % 24 ))
+    crontab -l 2>/dev/null | grep -vF -e "$SCRIPT_DIR/scheduled-restart.sh" -e "$rs_script" \
+        | { cat; echo "$cron_min $cron_hour * * * $rs_script"; } | crontab -
     log_ok "Scheduled restart set for ${BLD}$restart_time${R}${GRN} daily."
     sleep 1
 }
