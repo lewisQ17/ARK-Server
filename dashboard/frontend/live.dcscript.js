@@ -625,6 +625,10 @@ class Component extends DCLogic {
         kick:()=>this.sendRcon(selectedInst.id,'KickPlayer '+p.id),
         whisper:()=>this.sendRcon(selectedInst.id,'ServerChatToPlayer "'+(p.name||'')+'" An admin says hi')})),
       playerCount: selectedInst.players||0, max:selectedInst.max||70,
+      // empty states for the players table (the list itself comes from the API)
+      hasPlayerRows:(selectedInst.playerList||[]).length>0,
+      noPlayers:!selectedInst.isSleeping && !(selectedInst.players>0) && !(selectedInst.playerList||[]).length,
+      namesMissing:selectedInst.players>0 && !(selectedInst.playerList||[]).length,
       metrics:[
         {k:'CPU',sub:(selectedInst.coresAlloc!=null?(selectedInst.coresAlloc+' vCPU cap'):'host VM'),big:selectedInst.cpuStr,unit:'',pct:idle?0:(parseInt(selectedInst.cpuStr)||0),alloc:'host VM',color:'#37D3C3',flag:null},
         (function(cap,use){ return {k:'Memory',sub:cap+' GB cap',big:use,unit:'GB',pct:Math.round((parseFloat(use)||0)/cap*100),alloc:'of '+cap+' GB',color:'#FF7A2E',flag: idle?'Idle — VM RAM reclaimable':null}; })(selectedInst.ramLimitGB!=null?selectedInst.ramLimitGB:(selectedInst.ramAlloc||16), selectedInst.ramLiveGB!=null?selectedInst.ramLiveGB:selectedInst.ramUsed),
@@ -674,7 +678,7 @@ class Component extends DCLogic {
     const date=s.now.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short'});
     // Live activity = your recent dashboard actions + server-log events, newest first
     const actionFeed=(s.notifications||[]).slice(0,6).map(n=>({who:'You', action:n.msg, map:'dashboard', type:'sys', ago:relTime(n.ts), _color:n.color}));
-    const feed=actionFeed.concat((live.feed||[]).map(f=>({...f, ago:f.ago||'live'}))).slice(0,10).map(f=>({...f, ago:f.ago||'live', dot:{width:'8px',height:'8px',borderRadius:'99px',flex:'none',background:f._color||FEED_DOT[f.type]||'#5AA9FF',boxShadow:'0 0 7px '+(f._color||FEED_DOT[f.type]||'#5AA9FF')}}));
+    const feed=actionFeed.concat((live.feed||[])).slice(0,10).map(f=>({...f, ago:f.ago||'', dot:{width:'8px',height:'8px',borderRadius:'99px',flex:'none',background:f._color||FEED_DOT[f.type]||'#5AA9FF',boxShadow:'0 0 7px '+(f._color||FEED_DOT[f.type]||'#5AA9FF')}}));
     const tasks=(s.schedule||[]).slice(0,4).map(j=>{ const col={backup:'var(--cyan)',restart:'var(--amber)',healthcheck:'var(--green)',rcon:'var(--violet)',broadcast:'var(--violet)',multiplier:'var(--ember)',task:'var(--blue)'}[j.type]||'var(--blue)'; const ic={backup:'save',restart:'restart',healthcheck:'clock',rcon:'console',broadcast:'bolt',multiplier:'bolt',task:'clock'}[j.type]||'clock';
       return {name:(j.cmd.split('/').pop()||j.type).replace('.sh',''), when:cronHuman(j.cron), in:cronNext(j.cron, s.now), color:col, icon:icn(ic,16,col)}; });
 
@@ -684,7 +688,7 @@ class Component extends DCLogic {
     const hostCard = {
       name:hostName, healthy: host.vmStatus==='running',
       ram: (host.memUsed||0)+' / '+(host.memTotal||0)+' GB', ramPct: memPct+'%', ramBarStyle:{height:'100%',width:memPct+'%',borderRadius:'99px',background:'linear-gradient(90deg,var(--ember),var(--ember2))'},
-      cpu:(host.cpuPct||0)+'% · 4 vCPU', cpuBarStyle:{height:'100%',width:(host.cpuPct||0)+'%',borderRadius:'99px',background:'linear-gradient(90deg,var(--cyan),#69e3d6)'},
+      cpu:(host.cpuPct||0)+'%'+(host.cpus?' · '+host.cpus+' vCPU':''), cpuBarStyle:{height:'100%',width:(host.cpuPct||0)+'%',borderRadius:'99px',background:'linear-gradient(90deg,var(--cyan),#69e3d6)'},
       disk: (host.diskUsed!=null? host.diskUsed+' GB':'—')+(host.diskTotal? ' / '+host.diskTotal+' GB':''),
       memBig:(host.memUsed||0), memTotal:(host.memTotal||0), memPctStr:memPct+'%',
       statusColor: host.vmStatus==='running'?'var(--green)':'var(--red)',
@@ -748,14 +752,14 @@ class Component extends DCLogic {
       clusterColor: live.connected ? (running>0?'var(--green)':'var(--red)') : 'var(--amber)',
       clusterSub: live.connected ? (totalPlayers+' online · '+running+' running') : (live.error?String(live.error).slice(0,28):'reaching the ARK VM…'),
       hasEvent:false, eventLabel:'', eventDesc:'', eventWhen:'',
-      totalMax: provMax||70, playersTrend: live.connected ? 'live' : '',
+      totalMax: provMax||70, playersTrend:'',
       // settings General tab (real)
       genSession: ((selectedInst.config||{}).sessionName)||selectedInst.name||'—',
       genGamePort: ((selectedInst.ports||{}).game)||'—', genRconPort: ((selectedInst.ports||{}).rcon)||'27020',
       genStatus: (selectedInst.statusLabel||'—')+(selectedInst.isRunning?' · '+(selectedInst.players||0)+'/'+(selectedInst.max||70)+' players · uptime '+selectedInst.uptime:''),
       // console
       logRef:this.logRef,
-      consoleTabs: insts.filter(i=>i.provisioned).map(m=>{ const active=s.consoleTab===m.id; return {name:m.name, code:m.code, go:()=>this.setConsoleTab(m.id), sleeping:false, style:{display:'flex',alignItems:'center',gap:'7px',padding:'8px 13px',borderRadius:'9px',cursor:'pointer',fontSize:'12.5px',fontWeight:active?700:500,color:active?'var(--text)':'var(--mute)',background:active?'var(--surface2)':'transparent',border:'1px solid '+(active?'var(--line2)':'transparent')}, dot:{width:'6px',height:'6px',borderRadius:'99px',background:'var(--green)'}}; }),
+      consoleTabs: insts.filter(i=>i.provisioned).map(m=>{ const active=s.consoleTab===m.id; return {name:m.name, code:m.code, go:()=>this.setConsoleTab(m.id), sleeping:false, style:{display:'flex',alignItems:'center',gap:'7px',padding:'8px 13px',borderRadius:'9px',cursor:'pointer',fontSize:'12.5px',fontWeight:active?700:500,color:active?'var(--text)':'var(--mute)',background:active?'var(--surface2)':'transparent',border:'1px solid '+(active?'var(--line2)':'transparent')}, dot:{width:'6px',height:'6px',borderRadius:'99px',background:(STATUS[m.st]||STATUS.unknown).c}}; }),
       consoleFilters: CFILTERS.map(f=>{ const active=s.consoleFilter===f[0]; return {label:f[1], go:()=>this.setFilter(f[0]), style:{fontSize:'11.5px',fontWeight:600,padding:'5px 11px',borderRadius:'7px',cursor:'pointer',fontFamily:'JetBrains Mono,monospace',color:active?'var(--ember)':'var(--mute)',background:active?'var(--ember-soft)':'transparent',border:'1px solid '+(active?'rgba(255,122,46,.3)':'var(--line)')}}; }),
       consoleView,
       consoleMacros: CMACROS.map(mc=>({label:mc.label, run:()=>this.sendRcon(s.consoleTab, mc.cmd)})),
@@ -935,7 +939,11 @@ class Component extends DCLogic {
             scrubStyle:{position:'absolute',top:'0',bottom:'0',left:pos+'%',width:'2px',background:'linear-gradient(180deg,transparent,'+c+',transparent)',transform:'translateX(-50%)',display:active?'block':'none',pointerEvents:'none'},
             rowStyle:{display:'grid',gridTemplateColumns:'1.2fr 1.1fr 1fr .8fr auto',gap:'12px',padding:'11px 16px',borderBottom:'1px solid rgba(33,41,54,.5)',alignItems:'center',fontSize:'12.5px',cursor:'pointer',background:active?'var(--ember-soft)':'transparent'},
             pillStyle:{display:'inline-flex',alignItems:'center',gap:'5px',fontSize:'10.5px',fontWeight:600,padding:'2px 8px',borderRadius:'6px',color:c,background:c+'18',border:'1px solid '+c+'33'}}; }); })(this),
-      selBkp:(function(self){ const arr=s.backupList||[]; const b=arr.find(x=>x.name===(s.selBkpName||(arr[0]&&arr[0].name)))||arr[0]||{}; return {id:b.name||'', when:b.when||b.name||'—', map:selectedInst.name, size:b.size||'—', tgColor:'#37D3C3', restore:()=>self.restoreBackup(b.name), del:()=>self.askDeleteBackup(b.name)}; })(this),
+      // the points are spread evenly in order (not to scale), so the axis only names both ends
+      bkpAxis:(function(){ const arr=s.backupList||[]; const d=(b)=>String((b&&(b.when||b.name))||'').slice(0,10);
+        if(!arr.length) return []; if(arr.length===1) return [{label:''},{label:d(arr[0])},{label:''}];
+        return [{label:'oldest · '+d(arr[arr.length-1])},{label:'newest · '+d(arr[0])}]; })(),
+      selBkp:(function(self){ const arr=s.backupList||[]; const b=arr.find(x=>x.name===(s.selBkpName||(arr[0]&&arr[0].name)))||arr[0]||{}; return {id:b.name||'', when:b.when||b.name||'—', map:selectedInst.name, size:b.size||'—', tgColor:({auto:'#8C7BF7',scheduled:'#FFB23E',update:'#5AA9FF'})[b.trigger]||'#37D3C3', restore:()=>self.restoreBackup(b.name), del:()=>self.askDeleteBackup(b.name)}; })(this),
       bkpCount:(s.backupList||[]).length,
       hasBackups:(s.backupList||[]).length>0, noBackups:(s.backupList||[]).length===0,
       bkpStorageNote:(s.backupList||[]).length>0 ? ('in '+selectedInst.name+" · maps/"+selectedInst.name+"/backups") : 'None yet — click Snapshot to create one',
