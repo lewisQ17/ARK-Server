@@ -123,7 +123,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
 
   <aside class="ark-side" style="background:linear-gradient(180deg,#0C0F14,#0A0C10);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;padding:16px 14px">
     <div class="ark-side-x" style="display:flex;align-items:center;gap:11px;padding:6px 6px 16px">
-      <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(140deg,var(--ember),#C6491A);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(255,122,46,.35);flex:none">
+      <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(140deg,var(--ember),#C6491A);display:flex;align-items:center;justify-content:center;flex:none">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#0A0C10" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19 12 4l8 15"/><path d="M8.4 14.5h7.2"/></svg>
       </div>
       <div style="min-width:0">
@@ -147,7 +147,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
 
     <div class="ark-side-x" style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px">
-        <span style="width:9px;height:9px;border-radius:99px;background:var(--green);box-shadow:0 0 10px var(--green)"></span>
+        <span style="width:9px;height:9px;border-radius:99px;background:{{ host.statusColor }}"></span>
         <span style="font-size:11.5px;font-weight:600;flex:1">{{ host.statusLabel }}</span>
         <span style="font-size:10px;color:var(--mute);font-family:'JetBrains Mono',monospace">{{ host.name }}</span>
       </div>
@@ -221,15 +221,15 @@ html,body{margin:0;padding:0;background:#0A0C10}
     </div>
     </sc-if>
 
-    <main class="ark-main" style="flex:1;overflow:auto;min-height:0;background:radial-gradient(1100px 500px at 78% -12%,rgba(255,122,46,.05),transparent 60%),var(--bg)">
+    <main class="ark-main" style="flex:1;overflow:auto;min-height:0;background:var(--bg)">
 
       <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
       <div class="ark-view" style="padding:22px 24px 40px;display:flex;flex-direction:column;gap:var(--gap)">
 
         <div class="ark-g4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--gap)">
-          <div style="background:linear-gradient(160deg,rgba(55,214,122,.1),var(--card));border:1px solid rgba(55,214,122,.25);border-radius:var(--radius);padding:var(--pad);display:flex;gap:14px;align-items:center">
-            <div class="ark-kpi-ico" style="width:46px;height:46px;border-radius:12px;background:rgba(55,214,122,.14);display:flex;align-items:center;justify-content:center;flex:none">
-              <span style="width:16px;height:16px;border-radius:99px;background:var(--green);box-shadow:0 0 14px var(--green)"></span>
+          <div style="background:var(--card);border:1px solid {{ clusterEdge }};border-radius:var(--radius);padding:var(--pad);display:flex;gap:14px;align-items:center">
+            <div class="ark-kpi-ico" style="width:46px;height:46px;border-radius:12px;background:{{ clusterTint }};display:flex;align-items:center;justify-content:center;flex:none">
+              <span style="width:16px;height:16px;border-radius:99px;background:{{ clusterColor }}"></span>
             </div>
             <div><div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Server health</div><div style="font-size:20px;font-weight:800;color:{{ clusterColor }};letter-spacing:-.01em">{{ clusterHealth }}</div><div style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace">{{ clusterSub }}</div></div>
           </div>
@@ -372,8 +372,8 @@ html,body{margin:0;padding:0;background:#0A0C10}
               <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px;font-weight:800;letter-spacing:-.02em">{{ sel.name }}</span><span style="{{ sel.pillStyle }}"><span style="{{ sel.dotStyle }}"></span>{{ sel.statusLabel }}</span></div>
               <div style="font-size:11.5px;color:var(--mute);font-family:'JetBrains Mono',monospace;margin-top:3px">{{ sel.map }} · {{ sel.gamemode }}</div>
             </div>
-            <div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:99px;padding:6px 13px;flex:none">
-              <span style="width:9px;height:9px;border-radius:99px;background:{{ sel.healthColor }};box-shadow:0 0 8px {{ sel.healthColor }}"></span>
+            <div style="display:flex;align-items:center;gap:7px;padding:6px 4px;flex:none">
+              <span style="width:9px;height:9px;border-radius:99px;background:{{ sel.healthColor }}"></span>
               <span style="font-size:12px;font-weight:600">{{ sel.healthLabel }}</span>
             </div>
             <div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:99px;padding:6px 13px;flex:none">
@@ -609,7 +609,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
             <sc-for list="{{ audit }}" as="a" hint-placeholder-count="7">
               <div style="padding:11px 16px;border-bottom:1px solid rgba(33,41,54,.5)">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-                  <span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:1px 6px;border-radius:5px;color:{{ a.whoColor }};background:{{ a.whoBg }}">{{ a.who }}</span>
+                  <span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:{{ a.whoColor }}">{{ a.who }}</span>
                   <span style="font-size:10px;color:var(--mute);font-family:'JetBrains Mono',monospace;flex:1;text-align:right">{{ a.ago }}</span>
                 </div>
                 <div style="font-size:11.5px;font-family:'JetBrains Mono',monospace;color:{{ a.cmdColor }};word-break:break-word">{{ a.cmd }}</div>
@@ -685,7 +685,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
           <div style="display:flex;flex-direction:column;gap:var(--gap)">
             <sc-if value="{{ hasBackups }}" hint-placeholder-val="{{ true }}">
             <div style="background:linear-gradient(160deg,var(--ember-soft),var(--card));border:1px solid rgba(255,122,46,.3);border-radius:var(--radius);padding:var(--pad)">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="width:9px;height:9px;border-radius:99px;background:{{ selBkp.tgColor }};box-shadow:0 0 8px {{ selBkp.tgColor }}"></span><span style="font-size:12.5px;font-weight:700;flex:1">Rollback target</span></div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="width:9px;height:9px;border-radius:99px;background:{{ selBkp.tgColor }}"></span><span style="font-size:12.5px;font-weight:700;flex:1">Rollback target</span></div>
               <div style="font-size:16px;font-weight:800;letter-spacing:-.01em;font-family:'JetBrains Mono',monospace;word-break:break-all">{{ selBkp.when }}</div>
               <div style="font-size:12px;color:var(--dim);margin-top:4px">{{ selBkp.map }} · {{ selBkp.size }}</div>
               <div style="display:flex;gap:8px;margin-top:15px">
@@ -866,7 +866,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
             <div class="ark-thead" style="display:grid;grid-template-columns:112px minmax(0,2fr) minmax(0,1.2fr) 76px;gap:14px;padding:10px 16px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:600"><span>Actor</span><span>Command</span><span>Target</span><span>When</span></div>
             <sc-for list="{{ audit }}" as="a" hint-placeholder-count="7">
               <div class="ark-au-row" style="display:grid;grid-template-columns:112px minmax(0,2fr) minmax(0,1.2fr) 76px;gap:14px;padding:12px 16px;border-bottom:1px solid rgba(33,41,54,.5);align-items:center">
-                <span class="ark-au-who" style="font-size:9.5px;font-weight:700;text-transform:uppercase;padding:2px 7px;border-radius:5px;color:{{ a.whoColor }};background:{{ a.whoBg }};justify-self:start">{{ a.who }}</span>
+                <span class="ark-au-who" style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:{{ a.whoColor }};justify-self:start">{{ a.who }}</span>
                 <span class="ark-au-cmd" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:{{ a.cmdColor }};min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.cmd }}</span>
                 <span class="ark-au-target" style="font-size:11.5px;color:var(--dim)">{{ a.target }}</span>
                 <span class="ark-au-ago" style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace">{{ a.ago }}</span>
@@ -1749,7 +1749,7 @@ class Component extends DCLogic {
         emblemStyle:{width:'44px',height:'44px',borderRadius:'11px',flex:'none',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:'800',fontSize:'13px',letterSpacing:'.02em',background:m.emblem+'1f',color:m.emblem,border:'1px solid '+m.emblem+'44',fontFamily:'JetBrains Mono,monospace'},
         icon:mapIcon(m.map, m.emblem),
         pillStyle:{display:'inline-flex',alignItems:'center',gap:'6px',flex:'none',fontSize:'11px',fontWeight:'700',padding:'4px 10px',borderRadius:'99px',color:sm.c,background:sm.c+'18',border:'1px solid '+sm.c+'3a'},
-        dotStyle:{width:'7px',height:'7px',borderRadius:'99px',background:sm.c,boxShadow:'0 0 8px '+sm.c, animation: starting?'pulse 1.2s infinite':'none'},
+        dotStyle:{width:'7px',height:'7px',borderRadius:'99px',background:sm.c, animation: starting?'pulse 1.2s infinite':'none'},
         gid:'sp-'+m.id, spColor: cpu>80?'#FF5B5B':(m.emblem==='#FF7A2E'?'#FF9E63':'var(--cyan)'), sparkLine:sp.line, sparkArea:sp.area,
         open:()=>this.sel(m.id), console:()=>this.openConsole(m.id), wake:()=>this.wake(m.id), restart:()=>this.instAction(m.id,'restart','Restart'), deploy:()=>this.openAddMap(),
         del:()=>this.askDeleteWorld(m.name)
@@ -1817,14 +1817,14 @@ class Component extends DCLogic {
     const navDef=[['overview','Overview'],['instance','Instances'],['console','Live Console'],['backups','Backups'],['settings','Settings']];
     const nav=navDef.map(d=>{ const active=v===d[0]; const badge=d[0]==='console'?(live.connected?'live':null):null;
       return {label:d[1], go:()=>this.setView(d[0]), active, current:active?'page':undefined, style:this.navStyle(active), icon:icn(d[0],19), iconStyle:{color:active?'var(--ember)':'var(--faint)',display:'flex'},
-        badge, badgeStyle:{fontSize:'9px',fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',color:'var(--green)',background:'rgba(55,214,122,.14)',border:'1px solid rgba(55,214,122,.3)',padding:'1px 6px',borderRadius:'5px'} }; });
+        badge, badgeStyle:{fontSize:'11px',fontWeight:600,color:'var(--green)',fontFamily:'JetBrains Mono,monospace'} }; });
     const connLabel = live.connected? (running+' running · ARK VM') : ('offline · '+(live.error?String(live.error).slice(0,40):'connecting…'));
     const T={overview:['Overview','Extinction cluster · '+connLabel],instance:[selectedInst.name,'Instance control · '+(selectedInst.map||'')],cluster:['Cluster','Single map — cluster not configured'],console:['Live Console','game log + RCON · '+selectedInst.name],backups:['Backups & Snapshots','ark-manager saved worlds'],settings:['Settings','Server configuration'],mobile:['Mobile / PWA','Companion view']};
     const clock=s.now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
     const date=s.now.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short'});
     // Live activity = your recent dashboard actions + server-log events, newest first
     const actionFeed=(s.notifications||[]).slice(0,6).map(n=>({who:'You', action:n.msg, map:'dashboard', type:'sys', ago:relTime(n.ts), _color:n.color}));
-    const feed=actionFeed.concat((live.feed||[])).slice(0,10).map(f=>({...f, ago:f.ago||'', dot:{width:'8px',height:'8px',borderRadius:'99px',flex:'none',background:f._color||FEED_DOT[f.type]||'#5AA9FF',boxShadow:'0 0 7px '+(f._color||FEED_DOT[f.type]||'#5AA9FF')}}));
+    const feed=actionFeed.concat((live.feed||[])).slice(0,10).map(f=>({...f, ago:f.ago||'', dot:{width:'8px',height:'8px',borderRadius:'99px',flex:'none',background:f._color||FEED_DOT[f.type]||'#5AA9FF'}}));
     const tasks=(s.schedule||[]).slice(0,4).map(j=>{ const col={backup:'var(--cyan)',restart:'var(--amber)',healthcheck:'var(--green)',rcon:'var(--violet)',broadcast:'var(--violet)',multiplier:'var(--ember)',task:'var(--blue)'}[j.type]||'var(--blue)'; const ic={backup:'save',restart:'restart',healthcheck:'clock',rcon:'console',broadcast:'bolt',multiplier:'bolt',task:'clock'}[j.type]||'clock';
       return {name:(j.cmd.split('/').pop()||j.type).replace('.sh',''), when:cronHuman(j.cron), in:cronNext(j.cron, s.now), color:col, icon:icn(ic,16,col)}; });
 
@@ -1881,12 +1881,12 @@ class Component extends DCLogic {
     return {rootRef:this.rootRef,
       paletteOpen:s.palette, openPalette:()=>this.setState({palette:true}), closePalette:pclose, stopClick:(e)=>e.stopPropagation(),
       paletteItems,
-      toasts: s.toasts.map(t=>({...t, dot:{width:'8px',height:'8px',borderRadius:'99px',flex:'none',background:t.color,boxShadow:'0 0 8px '+t.color}})),
+      toasts: s.toasts.map(t=>({...t, dot:{width:'8px',height:'8px',borderRadius:'99px',flex:'none',background:t.color}})),
       notifOpen:s.notifOpen,
       notifCount:(s.notifications||[]).filter(n=>n.ts>(s.notifReadTs||0)).length,
       notifUnread:(s.notifications||[]).filter(n=>n.ts>(s.notifReadTs||0)).length>0,
       notifHasAny:(s.notifications||[]).length>0, notifEmpty:(s.notifications||[]).length===0,
-      notifItems:(s.notifications||[]).slice(0,20).map(n=>({msg:n.msg, ago:relTime(n.ts), dismiss:()=>this.dismissNotif(n.id), dot:{width:'7px',height:'7px',borderRadius:'99px',flex:'none',marginTop:'5px',background:n.color||'#5AA9FF',boxShadow:'0 0 6px '+(n.color||'#5AA9FF')}})),
+      notifItems:(s.notifications||[]).slice(0,20).map(n=>({msg:n.msg, ago:relTime(n.ts), dismiss:()=>this.dismissNotif(n.id), dot:{width:'7px',height:'7px',borderRadius:'99px',flex:'none',marginTop:'5px',background:n.color||'#5AA9FF'}})),
       toggleNotif:()=>this.toggleNotif(), clearNotif:()=>this.clearNotif(), closeNotif:()=>this.setState({notifOpen:false}),
       isOverview:v==='overview', isInstance:v==='instance', isCluster:v==='cluster', isConsole:v==='console', isBackups:v==='backups', isSettings:v==='settings', isMobile:v==='mobile',
       nav, title:T[v][0], subtitle:T[v][1], clock, date,
@@ -1896,6 +1896,8 @@ class Component extends DCLogic {
       host:hostCard, connected:live.connected, connError:live.error,
       clusterHealth: live.connected ? (running>0?'Online':'Offline') : 'Connecting…',
       clusterColor: live.connected ? (running>0?'var(--green)':'var(--red)') : 'var(--amber)',
+      clusterEdge: live.connected ? (running>0?'rgba(55,214,122,.3)':'rgba(255,91,91,.3)') : 'rgba(255,178,62,.3)',
+      clusterTint: live.connected ? (running>0?'rgba(55,214,122,.14)':'rgba(255,91,91,.14)') : 'rgba(255,178,62,.14)',
       clusterSub: live.connected ? (totalPlayers+' online · '+running+' running') : (live.error?String(live.error).slice(0,28):'reaching the ARK VM…'),
       hasEvent:false, eventLabel:'', eventDesc:'', eventWhen:'',
       totalMax: provMax||70, playersTrend:'',
@@ -2081,10 +2083,10 @@ class Component extends DCLogic {
         const TRG={auto:{c:'#8C7BF7',label:'Auto · pre-restore'},scheduled:{c:'#FFB23E',label:'Scheduled'},update:{c:'#5AA9FF',label:'Pre-update'},manual:{c:'#37D3C3',label:'Manual'}};
         return arr.map((b,i)=>{ const pos=arr.length>1?(95-i*(90/(arr.length-1))):50; const active=b.name===selName; const tg=TRG[b.trigger]||TRG.manual; const c=tg.c;
           return {id:b.name, when:b.when||b.name, map:selectedInst.name, size:b.size||'', note:(b.trigger==='auto'?'auto safety copy':(b.trigger==='scheduled'?'scheduled backup':'saved world')), tgLabel:tg.label, tgColor:c, active, select:()=>self.setState({selBkpName:b.name}), restore:()=>self.restoreBackup(b.name), del:()=>self.askDeleteBackup(b.name),
-            dotStyle:{position:'absolute',top:'50%',left:pos+'%',transform:'translate(-50%,-50%)',width:active?'18px':'12px',height:active?'18px':'12px',borderRadius:'99px',background:c,border:'2px solid #0A0C10',boxShadow:active?'0 0 0 4px '+c+'40':'0 0 6px '+c,cursor:'pointer',zIndex:active?3:2},
-            scrubStyle:{position:'absolute',top:'0',bottom:'0',left:pos+'%',width:'2px',background:'linear-gradient(180deg,transparent,'+c+',transparent)',transform:'translateX(-50%)',display:active?'block':'none',pointerEvents:'none'},
+            dotStyle:{position:'absolute',top:'50%',left:pos+'%',transform:'translate(-50%,-50%)',width:active?'18px':'12px',height:active?'18px':'12px',borderRadius:'99px',background:c,border:'2px solid #0A0C10',boxShadow:active?'0 0 0 2px '+c:'none',cursor:'pointer',zIndex:active?3:2},
+            scrubStyle:{position:'absolute',top:'0',bottom:'0',left:pos+'%',width:'1px',background:c,opacity:.45,transform:'translateX(-50%)',display:active?'block':'none',pointerEvents:'none'},
             rowStyle:{display:'grid',gridTemplateColumns:'1.2fr 1.1fr 1fr .8fr auto',gap:'12px',padding:'11px 16px',borderBottom:'1px solid rgba(33,41,54,.5)',alignItems:'center',fontSize:'12.5px',cursor:'pointer',background:active?'var(--ember-soft)':'transparent'},
-            pillStyle:{display:'inline-flex',alignItems:'center',gap:'5px',fontSize:'10.5px',fontWeight:600,padding:'2px 8px',borderRadius:'6px',color:c,background:c+'18',border:'1px solid '+c+'33'}}; }); })(this),
+            pillStyle:{fontSize:'11px',fontWeight:600,color:c,whiteSpace:'nowrap'}}; }); })(this),
       // the points are spread evenly in order (not to scale), so the axis only names both ends
       bkpAxis:(function(){ const arr=s.backupList||[]; const d=(b)=>String((b&&(b.when||b.name))||'').slice(0,10);
         if(!arr.length) return []; if(arr.length===1) return [{label:''},{label:d(arr[0])},{label:''}];

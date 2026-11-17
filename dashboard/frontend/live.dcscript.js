@@ -603,7 +603,7 @@ class Component extends DCLogic {
         emblemStyle:{width:'44px',height:'44px',borderRadius:'11px',flex:'none',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:'800',fontSize:'13px',letterSpacing:'.02em',background:m.emblem+'1f',color:m.emblem,border:'1px solid '+m.emblem+'44',fontFamily:'JetBrains Mono,monospace'},
         icon:mapIcon(m.map, m.emblem),
         pillStyle:{display:'inline-flex',alignItems:'center',gap:'6px',flex:'none',fontSize:'11px',fontWeight:'700',padding:'4px 10px',borderRadius:'99px',color:sm.c,background:sm.c+'18',border:'1px solid '+sm.c+'3a'},
-        dotStyle:{width:'7px',height:'7px',borderRadius:'99px',background:sm.c,boxShadow:'0 0 8px '+sm.c, animation: starting?'pulse 1.2s infinite':'none'},
+        dotStyle:{width:'7px',height:'7px',borderRadius:'99px',background:sm.c, animation: starting?'pulse 1.2s infinite':'none'},
         gid:'sp-'+m.id, spColor: cpu>80?'#FF5B5B':(m.emblem==='#FF7A2E'?'#FF9E63':'var(--cyan)'), sparkLine:sp.line, sparkArea:sp.area,
         open:()=>this.sel(m.id), console:()=>this.openConsole(m.id), wake:()=>this.wake(m.id), restart:()=>this.instAction(m.id,'restart','Restart'), deploy:()=>this.openAddMap(),
         del:()=>this.askDeleteWorld(m.name)
@@ -671,14 +671,14 @@ class Component extends DCLogic {
     const navDef=[['overview','Overview'],['instance','Instances'],['console','Live Console'],['backups','Backups'],['settings','Settings']];
     const nav=navDef.map(d=>{ const active=v===d[0]; const badge=d[0]==='console'?(live.connected?'live':null):null;
       return {label:d[1], go:()=>this.setView(d[0]), active, current:active?'page':undefined, style:this.navStyle(active), icon:icn(d[0],19), iconStyle:{color:active?'var(--ember)':'var(--faint)',display:'flex'},
-        badge, badgeStyle:{fontSize:'9px',fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',color:'var(--green)',background:'rgba(55,214,122,.14)',border:'1px solid rgba(55,214,122,.3)',padding:'1px 6px',borderRadius:'5px'} }; });
+        badge, badgeStyle:{fontSize:'11px',fontWeight:600,color:'var(--green)',fontFamily:'JetBrains Mono,monospace'} }; });
     const connLabel = live.connected? (running+' running · ARK VM') : ('offline · '+(live.error?String(live.error).slice(0,40):'connecting…'));
     const T={overview:['Overview','Extinction cluster · '+connLabel],instance:[selectedInst.name,'Instance control · '+(selectedInst.map||'')],cluster:['Cluster','Single map — cluster not configured'],console:['Live Console','game log + RCON · '+selectedInst.name],backups:['Backups & Snapshots','ark-manager saved worlds'],settings:['Settings','Server configuration'],mobile:['Mobile / PWA','Companion view']};
     const clock=s.now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
     const date=s.now.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short'});
     // Live activity = your recent dashboard actions + server-log events, newest first
     const actionFeed=(s.notifications||[]).slice(0,6).map(n=>({who:'You', action:n.msg, map:'dashboard', type:'sys', ago:relTime(n.ts), _color:n.color}));
-    const feed=actionFeed.concat((live.feed||[])).slice(0,10).map(f=>({...f, ago:f.ago||'', dot:{width:'8px',height:'8px',borderRadius:'99px',flex:'none',background:f._color||FEED_DOT[f.type]||'#5AA9FF',boxShadow:'0 0 7px '+(f._color||FEED_DOT[f.type]||'#5AA9FF')}}));
+    const feed=actionFeed.concat((live.feed||[])).slice(0,10).map(f=>({...f, ago:f.ago||'', dot:{width:'8px',height:'8px',borderRadius:'99px',flex:'none',background:f._color||FEED_DOT[f.type]||'#5AA9FF'}}));
     const tasks=(s.schedule||[]).slice(0,4).map(j=>{ const col={backup:'var(--cyan)',restart:'var(--amber)',healthcheck:'var(--green)',rcon:'var(--violet)',broadcast:'var(--violet)',multiplier:'var(--ember)',task:'var(--blue)'}[j.type]||'var(--blue)'; const ic={backup:'save',restart:'restart',healthcheck:'clock',rcon:'console',broadcast:'bolt',multiplier:'bolt',task:'clock'}[j.type]||'clock';
       return {name:(j.cmd.split('/').pop()||j.type).replace('.sh',''), when:cronHuman(j.cron), in:cronNext(j.cron, s.now), color:col, icon:icn(ic,16,col)}; });
 
@@ -735,12 +735,12 @@ class Component extends DCLogic {
     return {rootRef:this.rootRef,
       paletteOpen:s.palette, openPalette:()=>this.setState({palette:true}), closePalette:pclose, stopClick:(e)=>e.stopPropagation(),
       paletteItems,
-      toasts: s.toasts.map(t=>({...t, dot:{width:'8px',height:'8px',borderRadius:'99px',flex:'none',background:t.color,boxShadow:'0 0 8px '+t.color}})),
+      toasts: s.toasts.map(t=>({...t, dot:{width:'8px',height:'8px',borderRadius:'99px',flex:'none',background:t.color}})),
       notifOpen:s.notifOpen,
       notifCount:(s.notifications||[]).filter(n=>n.ts>(s.notifReadTs||0)).length,
       notifUnread:(s.notifications||[]).filter(n=>n.ts>(s.notifReadTs||0)).length>0,
       notifHasAny:(s.notifications||[]).length>0, notifEmpty:(s.notifications||[]).length===0,
-      notifItems:(s.notifications||[]).slice(0,20).map(n=>({msg:n.msg, ago:relTime(n.ts), dismiss:()=>this.dismissNotif(n.id), dot:{width:'7px',height:'7px',borderRadius:'99px',flex:'none',marginTop:'5px',background:n.color||'#5AA9FF',boxShadow:'0 0 6px '+(n.color||'#5AA9FF')}})),
+      notifItems:(s.notifications||[]).slice(0,20).map(n=>({msg:n.msg, ago:relTime(n.ts), dismiss:()=>this.dismissNotif(n.id), dot:{width:'7px',height:'7px',borderRadius:'99px',flex:'none',marginTop:'5px',background:n.color||'#5AA9FF'}})),
       toggleNotif:()=>this.toggleNotif(), clearNotif:()=>this.clearNotif(), closeNotif:()=>this.setState({notifOpen:false}),
       isOverview:v==='overview', isInstance:v==='instance', isCluster:v==='cluster', isConsole:v==='console', isBackups:v==='backups', isSettings:v==='settings', isMobile:v==='mobile',
       nav, title:T[v][0], subtitle:T[v][1], clock, date,
@@ -750,6 +750,8 @@ class Component extends DCLogic {
       host:hostCard, connected:live.connected, connError:live.error,
       clusterHealth: live.connected ? (running>0?'Online':'Offline') : 'Connecting…',
       clusterColor: live.connected ? (running>0?'var(--green)':'var(--red)') : 'var(--amber)',
+      clusterEdge: live.connected ? (running>0?'rgba(55,214,122,.3)':'rgba(255,91,91,.3)') : 'rgba(255,178,62,.3)',
+      clusterTint: live.connected ? (running>0?'rgba(55,214,122,.14)':'rgba(255,91,91,.14)') : 'rgba(255,178,62,.14)',
       clusterSub: live.connected ? (totalPlayers+' online · '+running+' running') : (live.error?String(live.error).slice(0,28):'reaching the ARK VM…'),
       hasEvent:false, eventLabel:'', eventDesc:'', eventWhen:'',
       totalMax: provMax||70, playersTrend:'',
@@ -935,10 +937,10 @@ class Component extends DCLogic {
         const TRG={auto:{c:'#8C7BF7',label:'Auto · pre-restore'},scheduled:{c:'#FFB23E',label:'Scheduled'},update:{c:'#5AA9FF',label:'Pre-update'},manual:{c:'#37D3C3',label:'Manual'}};
         return arr.map((b,i)=>{ const pos=arr.length>1?(95-i*(90/(arr.length-1))):50; const active=b.name===selName; const tg=TRG[b.trigger]||TRG.manual; const c=tg.c;
           return {id:b.name, when:b.when||b.name, map:selectedInst.name, size:b.size||'', note:(b.trigger==='auto'?'auto safety copy':(b.trigger==='scheduled'?'scheduled backup':'saved world')), tgLabel:tg.label, tgColor:c, active, select:()=>self.setState({selBkpName:b.name}), restore:()=>self.restoreBackup(b.name), del:()=>self.askDeleteBackup(b.name),
-            dotStyle:{position:'absolute',top:'50%',left:pos+'%',transform:'translate(-50%,-50%)',width:active?'18px':'12px',height:active?'18px':'12px',borderRadius:'99px',background:c,border:'2px solid #0A0C10',boxShadow:active?'0 0 0 4px '+c+'40':'0 0 6px '+c,cursor:'pointer',zIndex:active?3:2},
-            scrubStyle:{position:'absolute',top:'0',bottom:'0',left:pos+'%',width:'2px',background:'linear-gradient(180deg,transparent,'+c+',transparent)',transform:'translateX(-50%)',display:active?'block':'none',pointerEvents:'none'},
+            dotStyle:{position:'absolute',top:'50%',left:pos+'%',transform:'translate(-50%,-50%)',width:active?'18px':'12px',height:active?'18px':'12px',borderRadius:'99px',background:c,border:'2px solid #0A0C10',boxShadow:active?'0 0 0 2px '+c:'none',cursor:'pointer',zIndex:active?3:2},
+            scrubStyle:{position:'absolute',top:'0',bottom:'0',left:pos+'%',width:'1px',background:c,opacity:.45,transform:'translateX(-50%)',display:active?'block':'none',pointerEvents:'none'},
             rowStyle:{display:'grid',gridTemplateColumns:'1.2fr 1.1fr 1fr .8fr auto',gap:'12px',padding:'11px 16px',borderBottom:'1px solid rgba(33,41,54,.5)',alignItems:'center',fontSize:'12.5px',cursor:'pointer',background:active?'var(--ember-soft)':'transparent'},
-            pillStyle:{display:'inline-flex',alignItems:'center',gap:'5px',fontSize:'10.5px',fontWeight:600,padding:'2px 8px',borderRadius:'6px',color:c,background:c+'18',border:'1px solid '+c+'33'}}; }); })(this),
+            pillStyle:{fontSize:'11px',fontWeight:600,color:c,whiteSpace:'nowrap'}}; }); })(this),
       // the points are spread evenly in order (not to scale), so the axis only names both ends
       bkpAxis:(function(){ const arr=s.backupList||[]; const d=(b)=>String((b&&(b.when||b.name))||'').slice(0,10);
         if(!arr.length) return []; if(arr.length===1) return [{label:''},{label:d(arr[0])},{label:''}];
