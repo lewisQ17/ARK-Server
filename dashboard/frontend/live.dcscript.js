@@ -666,7 +666,7 @@ class Component extends DCLogic {
     const macros=MACROS.map(m=>({label:m.label, run:()=>this.sendRcon(selectedInst.id, m.cmd)}));
     const navDef=[['overview','Overview'],['instance','Instances'],['console','Live Console'],['backups','Backups'],['settings','Settings']];
     const nav=navDef.map(d=>{ const active=v===d[0]; const badge=d[0]==='console'?(live.connected?'live':null):null;
-      return {label:d[1], go:()=>this.setView(d[0]), active, style:this.navStyle(active), icon:icn(d[0],19), iconStyle:{color:active?'var(--ember)':'var(--faint)',display:'flex'},
+      return {label:d[1], go:()=>this.setView(d[0]), active, current:active?'page':undefined, style:this.navStyle(active), icon:icn(d[0],19), iconStyle:{color:active?'var(--ember)':'var(--faint)',display:'flex'},
         badge, badgeStyle:{fontSize:'9px',fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',color:'var(--green)',background:'rgba(55,214,122,.14)',border:'1px solid rgba(55,214,122,.3)',padding:'1px 6px',borderRadius:'5px'} }; });
     const connLabel = live.connected? (running+' running · ARK VM') : ('offline · '+(live.error?String(live.error).slice(0,40):'connecting…'));
     const T={overview:['Overview','Extinction cluster · '+connLabel],instance:[selectedInst.name,'Instance control · '+(selectedInst.map||'')],cluster:['Cluster','Single map — cluster not configured'],console:['Live Console','game log + RCON · '+selectedInst.name],backups:['Backups & Snapshots','ark-manager saved worlds'],settings:['Settings','Server configuration'],mobile:['Mobile / PWA','Companion view']};
