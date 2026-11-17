@@ -964,7 +964,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
                 <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px">
                   <sc-for list="{{ newTask.rateList }}" as="r" hint-placeholder-count="2">
                     <div style="display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:8px 11px">
-                      <span style="flex:1;min-width:0;font-size:12px;font-family:'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.key }}</span>
+                      <span class="ark-unclip" style="flex:1;min-width:0;font-size:12px;font-family:'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.key }}</span>
                       <span style="font-size:11px;color:var(--mute);border:1px solid var(--line2);border-radius:5px;padding:1px 6px;font-family:'JetBrains Mono',monospace">{{ r.file }}</span>
                       <input value="{{ r.value }}" onChange="{{ r.setValue }}" style="{{ r.valInputStyle }}" /><span style="font-size:12px;color:var(--mute)">×</span>
                       <button onClick="{{ r.remove }}" title="Remove" style="width:24px;height:24px;border-radius:6px;background:var(--surface2);border:1px solid var(--line);color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:var(--red)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6 18 18M18 6 6 18"/></svg></button>
