@@ -9,7 +9,7 @@
   /* Hide the design template until the app mounts; show a clean loader meanwhile. */
   x-dc{display:none!important}
   html,body{background:#0A0C10}
-  #dc-boot{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#0A0C10;color:#5C6979;font-family:Archivo,system-ui,sans-serif}
+  #dc-boot{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#0A0C10;color:#7F8C9E;font-family:Archivo,system-ui,sans-serif}
   #dc-boot.hide{display:none}
   #dc-boot .spin{width:26px;height:26px;border-radius:50%;border:3px solid #212936;border-top-color:#FF7A2E;animation:dcspin .8s linear infinite}
   @keyframes dcspin{to{transform:rotate(360deg)}}
@@ -119,7 +119,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
 }
 </style>
 </helmet>
-<div ref="{{ rootRef }}" class="ark-root" style="--bg:#0A0C10;--bg2:#0D1015;--surface:#12161D;--surface2:#171C25;--card:#131820;--elevated:#1B2230;--line:#212936;--line2:#2C3644;--text:#E7ECF3;--dim:#93A0B2;--mute:#5C6979;--faint:#3A4757;--ember:#FF7A2E;--ember2:#FFA363;--ember-soft:rgba(255,122,46,0.13);--cyan:#37D3C3;--cyan-soft:rgba(55,211,195,0.12);--violet:#8C7BF7;--green:#37D67A;--amber:#FFB23E;--blue:#5AA9FF;--red:#FF5B5B;--grey:#6B7686;--pad:18px;--gap:16px;--radius:14px;font-family:Archivo,system-ui,sans-serif;color:var(--text);background:var(--bg);height:100vh;display:grid;grid-template-columns:256px 1fr;overflow:hidden;font-size:14px;-webkit-font-smoothing:antialiased">
+<div ref="{{ rootRef }}" class="ark-root" style="--bg:#0A0C10;--bg2:#0D1015;--surface:#12161D;--surface2:#171C25;--card:#131820;--elevated:#1B2230;--line:#212936;--line2:#2C3644;--text:#E7ECF3;--dim:#93A0B2;--mute:#7F8C9E;--faint:#647186;--ember:#FF7A2E;--ember2:#FFA363;--ember-soft:rgba(255,122,46,0.13);--cyan:#37D3C3;--cyan-soft:rgba(55,211,195,0.12);--violet:#8C7BF7;--green:#37D67A;--amber:#FFB23E;--blue:#5AA9FF;--red:#FF5B5B;--grey:#6B7686;--pad:18px;--gap:16px;--radius:14px;font-family:Archivo,system-ui,sans-serif;color:var(--text);background:var(--bg);height:100vh;display:grid;grid-template-columns:256px 1fr;overflow:hidden;font-size:14px;-webkit-font-smoothing:antialiased">
 
   <aside class="ark-side" style="background:linear-gradient(180deg,#0C0F14,#0A0C10);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;padding:16px 14px">
     <div class="ark-side-x" style="display:flex;align-items:center;gap:11px;padding:6px 6px 16px">
@@ -128,11 +128,11 @@ html,body{margin:0;padding:0;background:#0A0C10}
       </div>
       <div style="min-width:0">
         <div style="font-weight:800;font-size:14px;letter-spacing:.02em">ARK CONTROL</div>
-        <div style="font-size:10.5px;color:var(--mute);letter-spacing:.06em;text-transform:uppercase">Server Manager</div>
+        <div style="font-size:11px;color:var(--mute);letter-spacing:.06em;text-transform:uppercase">Server Manager</div>
       </div>
     </div>
 
-    <div class="ark-side-x" style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);padding:6px 8px 8px;font-weight:600">Control</div>
+    <div class="ark-side-x" style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);padding:6px 8px 8px;font-weight:600">Control</div>
     <nav class="ark-nav" style="display:flex;flex-direction:column;gap:2px">
       <sc-for list="{{ nav }}" as="n" hint-placeholder-count="7">
         <button onClick="{{ n.go }}" class="ark-navb" aria-current="{{ n.current }}" style="{{ n.style }}" style-hover="background:var(--surface2);color:var(--text)">
@@ -149,28 +149,28 @@ html,body{margin:0;padding:0;background:#0A0C10}
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px">
         <span style="width:9px;height:9px;border-radius:99px;background:{{ host.statusColor }}"></span>
         <span style="font-size:11.5px;font-weight:600;flex:1">{{ host.statusLabel }}</span>
-        <span style="font-size:10px;color:var(--mute);font-family:'JetBrains Mono',monospace">{{ host.name }}</span>
+        <span style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace">{{ host.name }}</span>
       </div>
       <div style="display:flex;flex-direction:column;gap:9px">
         <div>
-          <div style="display:flex;justify-content:space-between;font-size:10.5px;margin-bottom:4px"><span style="color:var(--dim)">RAM</span><span style="font-family:'JetBrains Mono',monospace;color:var(--text)">{{ host.ram }}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px"><span style="color:var(--dim)">RAM</span><span style="font-family:'JetBrains Mono',monospace;color:var(--text)">{{ host.ram }}</span></div>
           <div style="height:5px;border-radius:99px;background:var(--line);overflow:hidden"><div style="{{ host.ramBarStyle }}"></div></div>
         </div>
         <div>
-          <div style="display:flex;justify-content:space-between;font-size:10.5px;margin-bottom:4px"><span style="color:var(--dim)">CPU</span><span style="font-family:'JetBrains Mono',monospace;color:var(--text)">{{ host.cpu }}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px"><span style="color:var(--dim)">CPU</span><span style="font-family:'JetBrains Mono',monospace;color:var(--text)">{{ host.cpu }}</span></div>
           <div style="height:5px;border-radius:99px;background:var(--line);overflow:hidden"><div style="{{ host.cpuBarStyle }}"></div></div>
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--dim)">Disk</span><span style="font-family:'JetBrains Mono',monospace;color:var(--text)">{{ host.disk }}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--dim)">Disk</span><span style="font-family:'JetBrains Mono',monospace;color:var(--text)">{{ host.disk }}</span></div>
         <div style="display:flex;align-items:center;gap:7px;padding-top:2px;border-top:1px solid var(--line);margin-top:2px;padding-top:9px">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13.5A7.5 7.5 0 0 1 10.5 4 7.5 7.5 0 1 0 20 13.5Z"/></svg>
-          <span style="font-size:10.5px;color:var(--dim)">{{ host.note }}</span>
+          <span style="font-size:11px;color:var(--dim)">{{ host.note }}</span>
         </div>
       </div>
     </div>
 
     <div class="ark-side-x" style="display:flex;align-items:center;gap:10px;padding:8px 6px 2px">
       <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#2C3644,#1B2230);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--dim);flex:none">AD</div>
-      <div style="min-width:0;flex:1"><div style="font-size:12px;font-weight:600">admin</div><div style="font-size:10px;color:var(--mute)">Owner · this device</div></div>
+      <div style="min-width:0;flex:1"><div style="font-size:12px;font-weight:600">admin</div><div style="font-size:11px;color:var(--mute)">Owner · this device</div></div>
       <span style="width:7px;height:7px;border-radius:99px;background:var(--green)"></span>
     </div>
   </aside>
@@ -184,19 +184,19 @@ html,body{margin:0;padding:0;background:#0A0C10}
       <div onClick="{{ openPalette }}" class="ark-search" title="Search" style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:7px 11px;width:250px;color:var(--mute);cursor:pointer" style-hover="border-color:var(--line2);color:var(--dim)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.6-3.6"/></svg>
         <span class="ark-hide-m" style="font-size:12px;flex:1">Search players, files, RCON…</span>
-        <span class="ark-hide-m" style="font-size:9.5px;border:1px solid var(--line2);border-radius:5px;padding:1px 5px;font-family:'JetBrains Mono',monospace">⌘K</span>
+        <span class="ark-hide-m" style="font-size:11px;border:1px solid var(--line2);border-radius:5px;padding:1px 5px;font-family:'JetBrains Mono',monospace">⌘K</span>
       </div>
 <div style="position:relative">
       <button onClick="{{ toggleNotif }}" title="Notifications" style="position:relative;width:38px;height:38px;border-radius:10px;background:var(--surface);border:1px solid var(--line);color:var(--dim);display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="color:var(--text);border-color:var(--line2)">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 9a5.5 5.5 0 0 1 11 0c0 4 1.4 5.5 1.4 5.5H5.1S6.5 13 6.5 9Z"/><path d="M10 18.5a2 2 0 0 0 4 0"/></svg>
-        <sc-if value="{{ notifUnread }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:5px;right:6px;min-width:15px;height:15px;padding:0 3px;border-radius:99px;background:var(--ember);color:#0A0C10;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--surface)">{{ notifCount }}</span></sc-if>
+        <sc-if value="{{ notifUnread }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:5px;right:6px;min-width:16px;height:16px;padding:0 3px;border-radius:99px;background:var(--ember);color:#0A0C10;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--surface)">{{ notifCount }}</span></sc-if>
       </button>
       <sc-if value="{{ notifOpen }}" hint-placeholder-val="{{ false }}">
         <div onClick="{{ closeNotif }}" style="position:fixed;inset:0;z-index:70"></div>
         <div class="ark-notif" style="position:absolute;top:46px;right:0;z-index:71;width:320px;max-height:400px;overflow:auto;background:var(--elevated);border:1px solid var(--line2);border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,.55)">
-          <div style="display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)"><span style="font-size:12.5px;font-weight:700;flex:1">Notifications</span><button onClick="{{ clearNotif }}" style="font-size:10.5px;color:var(--mute);background:none;border:none;cursor:pointer" style-hover="color:var(--text)">Clear</button></div>
+          <div style="display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)"><span style="font-size:12.5px;font-weight:700;flex:1">Notifications</span><button onClick="{{ clearNotif }}" style="font-size:11px;color:var(--mute);background:none;border:none;cursor:pointer" style-hover="color:var(--text)">Clear</button></div>
           <sc-for list="{{ notifItems }}" as="n" hint-placeholder-count="0">
-            <div style="display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(33,41,54,.5)"><span style="{{ n.dot }}"></span><div style="min-width:0;flex:1"><div style="font-size:12px;line-height:1.4">{{ n.msg }}</div><div style="font-size:10px;color:var(--mute);font-family:'JetBrains Mono',monospace;margin-top:2px">{{ n.ago }}</div></div><button onClick="{{ n.dismiss }}" title="Dismiss" style="width:20px;height:20px;flex:none;border-radius:5px;background:none;border:none;color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:var(--red)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6 18 18M18 6 6 18"/></svg></button></div>
+            <div style="display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(33,41,54,.5)"><span style="{{ n.dot }}"></span><div style="min-width:0;flex:1"><div style="font-size:12px;line-height:1.4">{{ n.msg }}</div><div style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace;margin-top:2px">{{ n.ago }}</div></div><button onClick="{{ n.dismiss }}" title="Dismiss" style="width:20px;height:20px;flex:none;border-radius:5px;background:none;border:none;color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:var(--red)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6 18 18M18 6 6 18"/></svg></button></div>
           </sc-for>
           <sc-if value="{{ notifHasAny }}" hint-placeholder-val="{{ false }}"><span></span></sc-if>
           <sc-if value="{{ notifEmpty }}" hint-placeholder-val="{{ true }}"><div style="padding:22px;text-align:center;font-size:11.5px;color:var(--mute)">No notifications yet</div></sc-if>
@@ -205,7 +205,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
       </div>
       <div class="ark-hide-m" style="text-align:right;font-family:'JetBrains Mono',monospace;padding-left:4px">
         <div style="font-size:15px;font-weight:600;letter-spacing:.02em">{{ clock }}</div>
-        <div style="font-size:10px;color:var(--mute)">{{ date }}</div>
+        <div style="font-size:11px;color:var(--mute)">{{ date }}</div>
       </div>
     </header>
 
@@ -243,7 +243,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
                 <path d="{{ playersArea }}" fill="url(#pspark)"/>
                 <path d="{{ playersLine }}" fill="none" stroke="#37D67A" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
               </svg>
-              <span style="font-size:10px;color:var(--green);font-family:'JetBrains Mono',monospace;flex:none">{{ playersTrend }}</span>
+              <span style="font-size:11px;color:var(--green);font-family:'JetBrains Mono',monospace;flex:none">{{ playersTrend }}</span>
             </div>
           </div>
           <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad)">
@@ -269,7 +269,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
                 <div style="display:flex;align-items:center;gap:12px">
                   <div style="{{ i.emblemStyle }}">{{ i.icon }}</div>
                   <div style="min-width:0;flex:1">
-                    <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;font-size:15.5px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ i.name }}</span><span style="font-size:9.5px;color:var(--mute);border:1px solid var(--line2);padding:1px 6px;border-radius:5px;font-weight:600;flex:none">{{ i.gamemode }}</span></div>
+                    <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;font-size:15.5px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ i.name }}</span><span style="font-size:11px;color:var(--mute);border:1px solid var(--line2);padding:1px 6px;border-radius:5px;font-weight:600;flex:none">{{ i.gamemode }}</span></div>
                     <div style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace;margin-top:3px">{{ i.map }}<sc-if value="{{ i.mods }}" hint-placeholder-val="{{ false }}"> · {{ i.mods }} mods</sc-if></div>
                   </div>
                   <span style="{{ i.pillStyle }}"><span style="{{ i.dotStyle }}"></span>{{ i.statusLabel }}</span>
@@ -277,10 +277,10 @@ html,body{margin:0;padding:0;background:#0A0C10}
                 </div>
 
                 <div style="display:flex;gap:18px;font-family:'JetBrains Mono',monospace">
-                  <div><div style="font-size:10px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em">Players</div><div style="font-size:16px;font-weight:600;margin-top:2px">{{ i.playersStr }}</div></div>
-                  <div><div style="font-size:10px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em">Uptime</div><div style="font-size:16px;font-weight:600;margin-top:2px">{{ i.uptime }}</div></div>
-                  <div style="flex:1"><div style="font-size:10px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em">CPU</div><div style="font-size:16px;font-weight:600;margin-top:2px;color:{{ i.cpuColor }}">{{ i.cpuStr }}</div></div>
-                  <sc-if value="{{ i.hasUpd }}" hint-placeholder-val="{{ true }}"><span style="align-self:center;display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:var(--blue);background:rgba(90,169,255,.12);border:1px solid rgba(90,169,255,.3);padding:3px 8px;border-radius:6px"><span style="width:6px;height:6px;border-radius:99px;background:var(--blue)"></span>v{{ i.upd }}</span></sc-if>
+                  <div><div style="font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em">Players</div><div style="font-size:16px;font-weight:600;margin-top:2px">{{ i.playersStr }}</div></div>
+                  <div><div style="font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em">Uptime</div><div style="font-size:16px;font-weight:600;margin-top:2px">{{ i.uptime }}</div></div>
+                  <div style="flex:1"><div style="font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em">CPU</div><div style="font-size:16px;font-weight:600;margin-top:2px;color:{{ i.cpuColor }}">{{ i.cpuStr }}</div></div>
+                  <sc-if value="{{ i.hasUpd }}" hint-placeholder-val="{{ true }}"><span style="align-self:center;display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--blue);background:rgba(90,169,255,.12);border:1px solid rgba(90,169,255,.3);padding:3px 8px;border-radius:6px"><span style="width:6px;height:6px;border-radius:99px;background:var(--blue)"></span>v{{ i.upd }}</span></sc-if>
                 </div>
 
                 <div>
@@ -327,33 +327,33 @@ html,body{margin:0;padding:0;background:#0A0C10}
 
           <div style="display:flex;flex-direction:column;gap:var(--gap)">
             <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden">
-              <div style="display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--line)"><span style="width:7px;height:7px;border-radius:99px;background:var(--green);animation:pulse 2s infinite"></span><span style="font-size:12.5px;font-weight:700;flex:1">Live activity</span><span style="font-size:10px;color:var(--mute);font-family:'JetBrains Mono',monospace">all maps</span></div>
+              <div style="display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--line)"><span style="width:7px;height:7px;border-radius:99px;background:var(--green);animation:pulse 2s infinite"></span><span style="font-size:12.5px;font-weight:700;flex:1">Live activity</span><span style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace">all maps</span></div>
               <div style="display:flex;flex-direction:column;max-height:280px;overflow:auto">
                 <sc-for list="{{ feed }}" as="f" hint-placeholder-count="6">
                   <div style="display:flex;align-items:center;gap:11px;padding:10px 16px;border-bottom:1px solid rgba(33,41,54,.5)">
                     <span style="{{ f.dot }}"></span>
-                    <div style="min-width:0;flex:1"><div style="font-size:12.5px"><span style="font-weight:600">{{ f.who }}</span> <span style="color:var(--dim)">{{ f.action }}</span></div><div style="font-size:10.5px;color:var(--mute);font-family:'JetBrains Mono',monospace">{{ f.map }}</div></div>
-                    <span style="font-size:10.5px;color:var(--mute);font-family:'JetBrains Mono',monospace;flex:none">{{ f.ago }}</span>
+                    <div style="min-width:0;flex:1"><div style="font-size:12.5px"><span style="font-weight:600">{{ f.who }}</span> <span style="color:var(--dim)">{{ f.action }}</span></div><div style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace">{{ f.map }}</div></div>
+                    <span style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace;flex:none">{{ f.ago }}</span>
                   </div>
                 </sc-for>
               </div>
             </div>
 
             <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 1.8"/></svg><span style="font-size:12.5px;font-weight:700;flex:1">Upcoming tasks</span><button onClick="{{ goSettings }}" style="font-size:10.5px;color:var(--ember);background:none;border:none;cursor:pointer;font-weight:600">Schedule</button></div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 1.8"/></svg><span style="font-size:12.5px;font-weight:700;flex:1">Upcoming tasks</span><button onClick="{{ goSettings }}" style="font-size:11px;color:var(--ember);background:none;border:none;cursor:pointer;font-weight:600">Schedule</button></div>
               <div style="display:flex;flex-direction:column;gap:11px">
                 <sc-for list="{{ tasks }}" as="t" hint-placeholder-count="3">
                   <div style="display:flex;align-items:center;gap:11px">
                     <div style="width:32px;height:32px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:{{ t.color }};flex:none">{{ t.icon }}</div>
-                    <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600">{{ t.name }}</div><div style="font-size:10.5px;color:var(--mute);font-family:'JetBrains Mono',monospace">{{ t.when }}</div></div>
-                    <span style="font-size:10.5px;color:var(--dim);font-family:'JetBrains Mono',monospace">{{ t.in }}</span>
+                    <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600">{{ t.name }}</div><div style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace">{{ t.when }}</div></div>
+                    <span style="font-size:11px;color:var(--dim);font-family:'JetBrains Mono',monospace">{{ t.in }}</span>
                   </div>
                 </sc-for>
               </div>
             </div>
 
             <div style="background:linear-gradient(160deg,rgba(88,101,242,.08),var(--card));border:1px solid rgba(88,101,242,.22);border-radius:var(--radius);padding:16px">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A93F0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8.5c2.7-1 5.3-1 8 0M8 15.5c2.7 1 5.3 1 8 0"/><circle cx="9.5" cy="12.3" r="1.1"/><circle cx="14.5" cy="12.3" r="1.1"/></svg><span style="font-size:12.5px;font-weight:700;flex:1">Discord webhook</span><span style="font-size:10px;color:var(--mute);display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:99px;background:var(--mute)"></span>Off</span></div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A93F0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8.5c2.7-1 5.3-1 8 0M8 15.5c2.7 1 5.3 1 8 0"/><circle cx="9.5" cy="12.3" r="1.1"/><circle cx="14.5" cy="12.3" r="1.1"/></svg><span style="font-size:12.5px;font-weight:700;flex:1">Discord webhook</span><span style="font-size:11px;color:var(--mute);display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:99px;background:var(--mute)"></span>Off</span></div>
               <div style="font-size:11.5px;color:var(--dim);line-height:1.6">Not configured — add a webhook URL in Settings to post joins, crashes &amp; backups to Discord.</div>
             </div>
           </div>
@@ -412,18 +412,18 @@ html,body{margin:0;padding:0;background:#0A0C10}
                     <div>
                       <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px"><span style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600">CPU</span><span style="font-size:18px;font-weight:700;font-family:'JetBrains Mono',monospace">{{ compute.coresLabel }}</span></div>
                       <div style="position:relative;height:18px"><div style="{{ compute.cpu.track }}"></div><div style="{{ compute.cpu.fill }}"></div><div style="{{ compute.cpu.knob }}"></div><input type="range" class="ark-range" min="{{ compute.cpuSMin }}" max="{{ compute.cpuSMax }}" step="{{ compute.cpuSStep }}" value="{{ compute.cpuSVal }}" onChange="{{ compute.onCpu }}" style="{{ compute.cpu.rangeStyle }}" /></div>
-                      <div style="font-size:10.5px;color:var(--mute);font-family:'JetBrains Mono',monospace;margin-top:10px">{{ compute.cpuShare }}</div>
+                      <div style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace;margin-top:10px">{{ compute.cpuShare }}</div>
                     </div>
                     <div>
                       <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px"><span style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Memory</span><span style="font-size:18px;font-weight:700;font-family:'JetBrains Mono',monospace">{{ compute.ramLabel }}</span></div>
                       <div style="position:relative;height:18px"><div style="{{ compute.mem.track }}"></div><div style="{{ compute.mem.fill }}"></div><div style="{{ compute.mem.knob }}"></div><input type="range" class="ark-range" min="{{ compute.ramSMin }}" max="{{ compute.ramSMax }}" step="{{ compute.ramSStep }}" value="{{ compute.ramSVal }}" onChange="{{ compute.onRam }}" style="{{ compute.mem.rangeStyle }}" /></div>
-                      <div style="font-size:10.5px;color:var(--mute);font-family:'JetBrains Mono',monospace;margin-top:10px">{{ compute.ramShare }}{{ compute.liveLabel }}</div>
+                      <div style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace;margin-top:10px">{{ compute.ramShare }}{{ compute.liveLabel }}</div>
                     </div>
                   </div>
                   <sc-if value="{{ compute.warn }}" hint-placeholder-val="{{ true }}">
                     <div style="margin-top:15px;font-size:11px;color:var(--amber);background:rgba(255,178,62,.1);border:1px solid rgba(255,178,62,.25);border-radius:7px;padding:7px 11px;display:flex;align-items:center;gap:7px"><span style="width:5px;height:5px;border-radius:99px;background:var(--amber);flex:none"></span>{{ compute.warn }}</div>
                   </sc-if>
-                  <div style="margin-top:14px;font-size:10.5px;color:var(--faint);line-height:1.5">Applied live as a systemd cgroup cap on this world — no VM reboot.</div>
+                  <div style="margin-top:14px;font-size:11px;color:var(--mute);line-height:1.5">Applied live as a systemd cgroup cap on this world — no VM reboot.</div>
                 </div>
               </sc-if>
             </div>
@@ -444,11 +444,11 @@ html,body{margin:0;padding:0;background:#0A0C10}
         <div class="ark-g4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--gap)">
           <sc-for list="{{ sel.metrics }}" as="m" hint-placeholder-count="4">
             <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad)">
-              <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600">{{ m.k }}</span><span style="font-size:10px;color:var(--mute)">{{ m.sub }}</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600">{{ m.k }}</span><span style="font-size:11px;color:var(--mute)">{{ m.sub }}</span></div>
               <div style="font-family:'JetBrains Mono',monospace;margin-top:8px;display:flex;align-items:baseline;gap:5px"><span style="font-size:24px;font-weight:700">{{ m.big }}</span><span style="font-size:13px;color:var(--mute)">{{ m.unit }}</span></div>
               <div style="height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:9px"><div style="{{ m.barStyle }}"></div></div>
-              <div style="font-size:10.5px;color:var(--mute);font-family:'JetBrains Mono',monospace;margin-top:6px">{{ m.alloc }}</div>
-              <sc-if value="{{ m.flag }}" hint-placeholder-val="{{ true }}"><div style="margin-top:8px;font-size:10.5px;color:var(--amber);background:rgba(255,178,62,.1);border:1px solid rgba(255,178,62,.25);border-radius:6px;padding:4px 8px;display:flex;align-items:center;gap:5px"><span style="width:5px;height:5px;border-radius:99px;background:var(--amber)"></span>{{ m.flag }}</div></sc-if>
+              <div style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace;margin-top:6px">{{ m.alloc }}</div>
+              <sc-if value="{{ m.flag }}" hint-placeholder-val="{{ true }}"><div style="margin-top:8px;font-size:11px;color:var(--amber);background:rgba(255,178,62,.1);border:1px solid rgba(255,178,62,.25);border-radius:6px;padding:4px 8px;display:flex;align-items:center;gap:5px"><span style="width:5px;height:5px;border-radius:99px;background:var(--amber)"></span>{{ m.flag }}</div></sc-if>
             </div>
           </sc-for>
         </div>
@@ -462,7 +462,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
                 <span style="font-size:13px;font-weight:700;flex:1">Resource history</span>
                 <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim)"><span style="width:9px;height:2px;background:var(--cyan);border-radius:2px"></span>CPU</span>
                 <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim)"><span style="width:9px;height:2px;background:var(--ember);border-radius:2px"></span>RAM</span>
-                <span style="font-size:10.5px;padding:3px 9px;border-radius:6px;background:var(--ember-soft);color:var(--ember);font-weight:600;font-family:'JetBrains Mono',monospace">last hour</span>
+                <span style="font-size:11px;padding:3px 9px;border-radius:6px;background:var(--ember-soft);color:var(--ember);font-weight:600;font-family:'JetBrains Mono',monospace">last hour</span>
               </div>
               <div style="position:relative;height:172px">
                 <svg viewBox="0 0 620 150" preserveAspectRatio="none" style="width:100%;height:150px;display:block">
@@ -472,9 +472,9 @@ html,body{margin:0;padding:0;background:#0A0C10}
                   <path d="{{ sel.graphCpu }}" fill="none" stroke="#37D3C3" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
                   <path d="{{ sel.graphRam }}" fill="none" stroke="#FF7A2E" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
                 </svg>
-                <div style="position:absolute;top:0;left:0;font-size:9.5px;color:var(--faint);font-family:'JetBrains Mono',monospace">100%</div>
-                <div style="position:absolute;bottom:16px;left:0;font-size:9.5px;color:var(--faint);font-family:'JetBrains Mono',monospace">0%</div>
-                <div style="position:absolute;bottom:0;right:0;font-size:9.5px;color:var(--faint);font-family:'JetBrains Mono',monospace">now · live VM metrics</div>
+                <div style="position:absolute;top:0;left:0;font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace">100%</div>
+                <div style="position:absolute;bottom:16px;left:0;font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace">0%</div>
+                <div style="position:absolute;bottom:0;right:0;font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace">now · live VM metrics</div>
               </div>
             </div>
 
@@ -485,13 +485,13 @@ html,body{margin:0;padding:0;background:#0A0C10}
                 <span style="font-size:11px;color:var(--green);font-family:'JetBrains Mono',monospace">{{ sel.playerCount }} / {{ sel.max }}</span>
               </div>
               <sc-if value="{{ sel.hasPlayerRows }}" hint-placeholder-val="{{ true }}">
-              <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:9px 16px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:600">
+              <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:9px 16px;border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);font-weight:600">
                 <span>Survivor</span><span>Actions</span>
               </div>
               </sc-if>
               <sc-for list="{{ sel.players }}" as="p" hint-placeholder-count="6">
                 <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:10px 16px;border-bottom:1px solid rgba(33,41,54,.5);align-items:center;font-size:12.5px">
-                  <div style="display:flex;align-items:center;gap:9px;min-width:0"><span style="width:26px;height:26px;border-radius:7px;background:var(--surface2);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;color:var(--dim);font-family:'JetBrains Mono',monospace;flex:none">{{ p.av }}</span><span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span></div>
+                  <div style="display:flex;align-items:center;gap:9px;min-width:0"><span style="width:26px;height:26px;border-radius:7px;background:var(--surface2);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--dim);font-family:'JetBrains Mono',monospace;flex:none">{{ p.av }}</span><span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span></div>
                   <div style="display:flex;gap:5px">
                     <button onClick="{{ p.whisper }}" title="Whisper via RCON" style="width:26px;height:26px;border-radius:6px;background:var(--surface2);border:1px solid var(--line);color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:var(--cyan)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v10H9l-4 3z"/></svg></button>
                     <button onClick="{{ p.kick }}" title="Kick player" style="width:26px;height:26px;border-radius:6px;background:var(--surface2);border:1px solid var(--line);color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:var(--red)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6 18 18M18 6 6 18"/></svg></button>
@@ -516,16 +516,16 @@ html,body{margin:0;padding:0;background:#0A0C10}
               <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:9px">
                 <span style="color:var(--ember);font-family:'JetBrains Mono',monospace;font-size:12px">›</span>
                 <input value="{{ rconInput }}" onChange="{{ onRconInput }}" onKeyDown="{{ onRconKey }}" placeholder="custom RCON command…" style="flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11.5px" />
-                <button onClick="{{ sendRconInput }}" style="font-size:10px;font-weight:600;color:var(--ember);background:var(--ember-soft);border:1px solid rgba(255,122,46,.3);border-radius:5px;padding:3px 8px;cursor:pointer">send</button>
+                <button onClick="{{ sendRconInput }}" style="font-size:11px;font-weight:600;color:var(--ember);background:var(--ember-soft);border:1px solid rgba(255,122,46,.3);border-radius:5px;padding:3px 8px;cursor:pointer">send</button>
               </div>
             </div>
 
             <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px">
-              <div style="display:flex;align-items:center;margin-bottom:12px"><span style="font-size:12.5px;font-weight:700;flex:1">Rates &amp; multipliers</span><span style="font-size:10px;color:var(--mute);font-family:'JetBrains Mono',monospace">GameUserSettings.ini</span></div>
+              <div style="display:flex;align-items:center;margin-bottom:12px"><span style="font-size:12.5px;font-weight:700;flex:1">Rates &amp; multipliers</span><span style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace">GameUserSettings.ini</span></div>
               <div style="display:flex;flex-direction:column;gap:10px">
                 <sc-for list="{{ sel.mult }}" as="mu" hint-placeholder-count="6">
                   <div>
-                    <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px"><span style="font-size:12px;color:var(--dim);flex:1">{{ mu.k }}</span><span style="font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;color:{{ mu.valColor }}">{{ mu.v }}</span><span style="font-size:10px;color:var(--faint);font-family:'JetBrains Mono',monospace">base {{ mu.base }}</span></div>
+                    <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px"><span style="font-size:12px;color:var(--dim);flex:1">{{ mu.k }}</span><span style="font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;color:{{ mu.valColor }}">{{ mu.v }}</span><span style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace">base {{ mu.base }}</span></div>
                     <div style="height:4px;border-radius:99px;background:var(--line);overflow:hidden"><div style="{{ mu.barStyle }}"></div></div>
                   </div>
                 </sc-for>
@@ -570,7 +570,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
           </div>
 
           <div class="ark-wrap" style="display:flex;align-items:center;gap:6px">
-            <span style="font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-right:2px">Filter</span>
+            <span style="font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-right:2px">Filter</span>
             <sc-for list="{{ consoleFilters }}" as="f" hint-placeholder-count="5">
               <button onClick="{{ f.go }}" style="{{ f.style }}">{{ f.label }}</button>
             </sc-for>
@@ -582,7 +582,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
             <div ref="{{ logRef }}" style="flex:1;overflow:auto;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85">
               <sc-for list="{{ consoleView }}" as="ln" hint-placeholder-count="12">
                 <div style="display:flex;gap:12px">
-                  <span style="color:{{ ln.tagColor }};font-weight:700;flex:none;width:42px;font-size:10px;padding-top:1px">{{ ln.tag }}</span>
+                  <span style="color:{{ ln.tagColor }};font-weight:700;flex:none;width:42px;font-size:11px;padding-top:1px">{{ ln.tag }}</span>
                   <span style="color:{{ ln.textColor }};min-width:0;word-break:break-word">{{ ln.txt }}</span>
                 </div>
               </sc-for>
@@ -592,7 +592,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
               <div style="display:flex;align-items:center;gap:10px;background:#0A0C10;border:1px solid var(--line);border-radius:8px;padding:9px 12px">
                 <span style="color:var(--ember);font-family:'JetBrains Mono',monospace;font-weight:700">›</span>
                 <input value="{{ rconInput }}" onChange="{{ onRconInput }}" onKeyDown="{{ onRconKey }}" placeholder="type an RCON command…" style="flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px" />
-                <button onClick="{{ sendRconInput }}" style="font-size:9.5px;font-weight:600;color:var(--ember);background:var(--ember-soft);border:1px solid rgba(255,122,46,.3);border-radius:5px;padding:3px 9px;cursor:pointer;font-family:'JetBrains Mono',monospace">↵ send</button>
+                <button onClick="{{ sendRconInput }}" style="font-size:11px;font-weight:600;color:var(--ember);background:var(--ember-soft);border:1px solid rgba(255,122,46,.3);border-radius:5px;padding:3px 9px;cursor:pointer;font-family:'JetBrains Mono',monospace">↵ send</button>
               </div>
               <div style="display:flex;gap:6px;flex-wrap:wrap">
                 <sc-for list="{{ consoleMacros }}" as="mc" hint-placeholder-count="6">
@@ -604,16 +604,16 @@ html,body{margin:0;padding:0;background:#0A0C10}
         </div>
 
         <div class="ark-console-audit" style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-direction:column;min-height:0;overflow:hidden">
-          <div style="display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h11M5 12h11M5 17h7"/><path d="M19 7v10"/></svg><span style="font-size:12.5px;font-weight:700;flex:1">Command audit</span><span style="font-size:10px;color:var(--mute)">who ran what</span></div>
+          <div style="display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h11M5 12h11M5 17h7"/><path d="M19 7v10"/></svg><span style="font-size:12.5px;font-weight:700;flex:1">Command audit</span><span style="font-size:11px;color:var(--mute)">who ran what</span></div>
           <div style="flex:1;overflow:auto">
             <sc-for list="{{ audit }}" as="a" hint-placeholder-count="7">
               <div style="padding:11px 16px;border-bottom:1px solid rgba(33,41,54,.5)">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-                  <span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:{{ a.whoColor }}">{{ a.who }}</span>
-                  <span style="font-size:10px;color:var(--mute);font-family:'JetBrains Mono',monospace;flex:1;text-align:right">{{ a.ago }}</span>
+                  <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:{{ a.whoColor }}">{{ a.who }}</span>
+                  <span style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace;flex:1;text-align:right">{{ a.ago }}</span>
                 </div>
                 <div style="font-size:11.5px;font-family:'JetBrains Mono',monospace;color:{{ a.cmdColor }};word-break:break-word">{{ a.cmd }}</div>
-                <div style="font-size:10px;color:var(--faint);margin-top:2px">→ {{ a.target }}</div>
+                <div style="font-size:11px;color:var(--mute);margin-top:2px">→ {{ a.target }}</div>
               </div>
             </sc-for>
           </div>
@@ -635,7 +635,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
             <div style="font-family:'JetBrains Mono',monospace;margin-top:7px"><span style="font-size:20px;font-weight:700;color:{{ autoBackupColor }}">{{ autoBackupState }}</span></div>
             <div style="font-size:11px;color:var(--mute);margin-top:9px;line-height:1.5">{{ autoBackupNote }}</div>
             <sc-for list="{{ backupSchedules }}" as="bs" hint-placeholder-count="0">
-              <div style="display:flex;align-items:center;gap:8px;margin-top:10px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:7px 10px"><span style="font-size:11px;flex:1;color:var(--dim)">{{ bs.human }}</span><button onClick="{{ bs.del }}" style="font-size:10.5px;font-weight:600;color:var(--red);background:rgba(255,91,91,.1);border:1px solid rgba(255,91,91,.25);border-radius:6px;padding:4px 9px;cursor:pointer">Turn off</button></div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:10px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:7px 10px"><span style="font-size:11px;flex:1;color:var(--dim)">{{ bs.human }}</span><button onClick="{{ bs.del }}" style="font-size:11px;font-weight:600;color:var(--red);background:rgba(255,91,91,.1);border:1px solid rgba(255,91,91,.25);border-radius:6px;padding:4px 9px;cursor:pointer">Turn off</button></div>
             </sc-for>
           </div>
           <div style="background:linear-gradient(120deg,var(--ember-soft),var(--card));border:1px solid rgba(255,122,46,.28);border-radius:var(--radius);padding:var(--pad);display:flex;align-items:center;gap:14px">
@@ -661,16 +661,16 @@ html,body{margin:0;padding:0;background:#0A0C10}
               <div onClick="{{ b.select }}" class="ark-dot" style="{{ b.dotStyle }}"></div>
             </sc-for>
           </div>
-          <div style="display:flex;justify-content:space-between;margin:6px 8px 0;font-size:10px;color:var(--faint);font-family:'JetBrains Mono',monospace"><sc-for list="{{ bkpAxis }}" as="ax" hint-placeholder-count="2"><span>{{ ax.label }}</span></sc-for></div>
+          <div style="display:flex;justify-content:space-between;margin:6px 8px 0;font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace"><sc-for list="{{ bkpAxis }}" as="ax" hint-placeholder-count="2"><span>{{ ax.label }}</span></sc-for></div>
         </div>
 
         <div class="ark-g1" style="display:grid;grid-template-columns:1.25fr 1fr;gap:var(--gap);align-items:start">
           <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden">
-            <div style="display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid var(--line)"><span style="font-size:12.5px;font-weight:700;flex:1">All snapshots</span><span style="font-size:10.5px;color:var(--mute)">newest first</span></div>
-            <div class="ark-thead" style="display:grid;grid-template-columns:1.2fr 1.1fr 1fr .8fr auto;gap:12px;padding:9px 16px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:600"><span>When</span><span>Map</span><span>Trigger</span><span>Size</span><span style="width:57px"></span></div>
+            <div style="display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid var(--line)"><span style="font-size:12.5px;font-weight:700;flex:1">All snapshots</span><span style="font-size:11px;color:var(--mute)">newest first</span></div>
+            <div class="ark-thead" style="display:grid;grid-template-columns:1.2fr 1.1fr 1fr .8fr auto;gap:12px;padding:9px 16px;border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);font-weight:600"><span>When</span><span>Map</span><span>Trigger</span><span>Size</span><span style="width:57px"></span></div>
             <sc-for list="{{ backups }}" as="b" hint-placeholder-count="7">
               <div onClick="{{ b.select }}" class="ark-bk-row" style="{{ b.rowStyle }}" style-hover="background:var(--surface2)">
-                <div class="ark-bk-when" style="min-width:0"><div style="font-weight:600;font-family:'JetBrains Mono',monospace;font-size:12px">{{ b.when }}</div><div style="font-size:10px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ b.note }}</div></div>
+                <div class="ark-bk-when" style="min-width:0"><div style="font-weight:600;font-family:'JetBrains Mono',monospace;font-size:12px">{{ b.when }}</div><div style="font-size:11px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ b.note }}</div></div>
                 <span class="ark-bk-map" style="color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ b.map }}</span>
                 <span class="ark-bk-trig" style="{{ b.pillStyle }}">{{ b.tgLabel }}</span>
                 <span class="ark-bk-size" style="font-family:'JetBrains Mono',monospace;color:var(--dim)">{{ b.size }}</span>
@@ -692,7 +692,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
                 <button onClick="{{ selBkp.restore }}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;font-size:12.5px;font-weight:700;color:#0A0C10;background:linear-gradient(90deg,var(--ember),var(--ember2));border:none;border-radius:9px;padding:10px;cursor:pointer" style-hover="filter:brightness(1.06)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A0C10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1M3.2 4.2v3.4h3.4"/></svg>Restore this world</button>
                 <button onClick="{{ selBkp.del }}" title="Delete this snapshot" style="flex:none;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--red);background:rgba(255,91,91,.1);border:1px solid rgba(255,91,91,.28);border-radius:9px;padding:10px 13px;cursor:pointer" style-hover="background:rgba(255,91,91,.16)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>Delete</button>
               </div>
-              <div style="display:flex;align-items:center;gap:7px;margin-top:11px;font-size:10.5px;color:var(--dim)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.8 20h18.4z"/><path d="M12 10v4M12 17h.01"/></svg>The server is stopped, the world restored, then restarted.</div>
+              <div style="display:flex;align-items:center;gap:7px;margin-top:11px;font-size:11px;color:var(--dim)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.8 20h18.4z"/><path d="M12 10v4M12 17h.01"/></svg>The server is stopped, the world restored, then restarted.</div>
             </div>
             </sc-if>
             <sc-if value="{{ noBackups }}" hint-placeholder-val="{{ false }}">
@@ -710,7 +710,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
       <div class="ark-view" style="padding:22px 24px 40px;display:flex;flex-direction:column;gap:16px">
 
         <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:13px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <span style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Configuring</span>
+          <span style="font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Configuring</span>
           <span style="font-size:12px;padding:5px 11px;border-radius:6px;background:var(--ember-soft);color:var(--ember);font-weight:700">{{ sel.name }}</span>
           <div style="flex:1"></div>
           <span style="font-size:11.5px;color:var(--mute);font-family:'JetBrains Mono',monospace">changes apply live to the server</span>
@@ -728,7 +728,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
             <div><div style="font-size:11px;color:var(--dim);margin-bottom:6px;font-weight:600">Server map</div><div style="background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13px;font-family:'JetBrains Mono',monospace">{{ sel.map }}</div></div>
             <div><div style="font-size:11px;color:var(--dim);margin-bottom:6px;font-weight:600">Game port · UDP</div><div style="background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13px;font-family:'JetBrains Mono',monospace">{{ genGamePort }}</div></div>
             <div><div style="font-size:11px;color:var(--dim);margin-bottom:6px;font-weight:600">RCON port · TCP (LAN)</div><div style="background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13px;font-family:'JetBrains Mono',monospace">{{ genRconPort }}</div></div>
-            <div class="ark-full"><div style="font-size:11px;color:var(--dim);margin-bottom:6px;font-weight:600">Admin password</div><div style="background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13px;font-family:'JetBrains Mono',monospace">•••••••• <span style="color:var(--faint);font-size:11px">· set in map.conf</span></div></div>
+            <div class="ark-full"><div style="font-size:11px;color:var(--dim);margin-bottom:6px;font-weight:600">Admin password</div><div style="background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13px;font-family:'JetBrains Mono',monospace">•••••••• <span style="color:var(--mute);font-size:11px">· set in map.conf</span></div></div>
             <div><div style="font-size:11px;color:var(--dim);margin-bottom:6px;font-weight:600">Max players</div><div style="background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13px;font-family:'JetBrains Mono',monospace">{{ sel.max }}</div></div>
             <div style="grid-column:1 / -1"><div style="font-size:11px;color:var(--dim);margin-bottom:6px;font-weight:600">Status</div><div style="background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13px">{{ genStatus }}</div></div>
           </div>
@@ -738,7 +738,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
           <div style="display:flex;flex-direction:column;gap:16px">
           <div class="ark-g1" style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:start">
             <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px">
-              <div style="display:flex;align-items:center;margin-bottom:18px"><span style="font-size:13px;font-weight:700;flex:1">Multipliers</span><span style="font-size:10.5px;color:var(--ember);display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="var(--ember)"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>event doubles boosted rates</span></div>
+              <div style="display:flex;align-items:center;margin-bottom:18px"><span style="font-size:13px;font-weight:700;flex:1">Multipliers</span><span style="font-size:11px;color:var(--ember);display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="var(--ember)"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>event doubles boosted rates</span></div>
               <div class="ark-g1" style="display:grid;grid-template-columns:1fr 1fr;gap:16px 22px">
                 <sc-for list="{{ rates }}" as="r" hint-placeholder-count="8">
                   <div>
@@ -750,9 +750,9 @@ html,body{margin:0;padding:0;background:#0A0C10}
             </div>
             <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;display:flex;flex-direction:column;gap:16px">
               <span style="font-size:13px;font-weight:700">Rules</span>
-              <div><div style="font-size:11px;color:var(--dim);margin-bottom:7px;font-weight:600">Game mode <span style="color:var(--faint)">· applies on next restart</span></div><div style="display:flex;gap:3px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:3px"><span onClick="{{ setPvE }}" class="ark-tap" style="{{ pveStyle }}">PvE</span><span onClick="{{ setPvP }}" class="ark-tap" style="{{ pvpStyle }}">PvP</span></div></div>
+              <div><div style="font-size:11px;color:var(--dim);margin-bottom:7px;font-weight:600">Game mode <span style="color:var(--mute)">· applies on next restart</span></div><div style="display:flex;gap:3px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:3px"><span onClick="{{ setPvE }}" class="ark-tap" style="{{ pveStyle }}">PvE</span><span onClick="{{ setPvP }}" class="ark-tap" style="{{ pvpStyle }}">PvP</span></div></div>
               <div><div style="font-size:11px;color:var(--dim);margin-bottom:7px;font-weight:600">Difficulty · {{ diff.label }}</div><div style="position:relative;height:18px"><div style="{{ diff.track }}"></div><div style="{{ diff.fill }}"></div><div style="{{ diff.knob }}"></div><input type="range" class="ark-range" min="{{ diff.sMin }}" max="{{ diff.sMax }}" step="{{ diff.sStep }}" value="{{ diff.val }}" onChange="{{ diff.onSlide }}" onMouseUp="{{ diff.onSlideUp }}" onKeyUp="{{ diff.onSlideUp }}" onBlur="{{ diff.onSlideUp }}" style="{{ diff.rangeStyle }}" /></div></div>
-              <div><div style="font-size:11px;color:var(--dim);margin-bottom:7px;font-weight:600">Crossplay platforms <span style="color:var(--faint)">· click to allow/block · applies on restart</span></div><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ crossPlatforms }}" as="cp" hint-placeholder-count="4"><span onClick="{{ cp.toggle }}" class="ark-tap" style="{{ cp.style }}">{{ cp.mark }}{{ cp.short }}</span></sc-for></div></div>
+              <div><div style="font-size:11px;color:var(--dim);margin-bottom:7px;font-weight:600">Crossplay platforms <span style="color:var(--mute)">· click to allow/block · applies on restart</span></div><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ crossPlatforms }}" as="cp" hint-placeholder-count="4"><span onClick="{{ cp.toggle }}" class="ark-tap" style="{{ cp.style }}">{{ cp.mark }}{{ cp.short }}</span></sc-for></div></div>
               <div onClick="{{ toggleThird }}" class="ark-taprow" style="display:flex;align-items:center;gap:10px;padding-top:4px;cursor:pointer"><span style="flex:1;font-size:12.5px">Third-person camera</span><span style="{{ thirdTog.track }}"><span style="{{ thirdTog.knob }}"></span></span></div>
               <div onClick="{{ toggleFlyer }}" class="ark-taprow" style="display:flex;align-items:center;gap:10px;cursor:pointer"><span style="flex:1;font-size:12.5px">Flyer carry (PvE)</span><span style="{{ flyerTog.track }}"><span style="{{ flyerTog.knob }}"></span></span></div>
             </div>
@@ -769,7 +769,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
               <div style="display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--line2);border-radius:10px;padding:11px 13px">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--mute)" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.6-3.6"/></svg>
                 <input value="{{ cfgQuery }}" onChange="{{ onCfgSearch }}" placeholder="Search settings — e.g. “tame”, “decay”, “water drain”, “night”…" style="flex:1;min-width:0;text-overflow:ellipsis;background:transparent;border:none;outline:none;color:var(--text);font:inherit;font-size:13px" />
-                <span style="font-size:10px;color:var(--faint);font-family:'JetBrains Mono',monospace">{{ cfgQuery }}</span>
+                <span style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace">{{ cfgQuery }}</span>
               </div>
 
               <sc-if value="{{ cfgHasQuery }}" hint-placeholder-val="{{ false }}">
@@ -778,8 +778,8 @@ html,body{margin:0;padding:0;background:#0A0C10}
                     <button onClick="{{ c.add }}" class="ark-res" style="display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;border:none;border-bottom:1px solid rgba(33,41,54,.5);background:transparent;color:var(--text);cursor:pointer;font:inherit;text-align:left" style-hover="background:var(--surface2)">
                       <span style="width:24px;height:24px;border-radius:6px;background:var(--ember-soft);color:var(--ember);display:flex;align-items:center;justify-content:center;flex:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
                       <div style="flex:1;min-width:0"><div class="ark-unclip" style="font-size:12.5px;font-weight:600;font-family:'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.key }}</div><div class="ark-unclip" style="font-size:11px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.desc }}</div></div>
-                      <span style="font-size:9.5px;color:var(--dim);border:1px solid var(--line2);border-radius:5px;padding:2px 7px;font-family:'JetBrains Mono',monospace;flex:none">{{ c.type }}</span>
-                      <span class="ark-hide-m" style="font-size:9.5px;color:var(--faint);flex:none">[{{ c.sec }}]</span>
+                      <span style="font-size:11px;color:var(--dim);border:1px solid var(--line2);border-radius:5px;padding:2px 7px;font-family:'JetBrains Mono',monospace;flex:none">{{ c.type }}</span>
+                      <span class="ark-hide-m" style="font-size:11px;color:var(--mute);flex:none">[{{ c.sec }}]</span>
                     </button>
                   </sc-for>
                   <sc-if value="{{ cfgCanAddCustom }}" hint-placeholder-val="{{ false }}">
@@ -795,12 +795,12 @@ html,body{margin:0;padding:0;background:#0A0C10}
 
             <sc-if value="{{ cfgCount }}" hint-placeholder-val="{{ true }}">
               <div style="display:flex;flex-direction:column;gap:9px;margin-top:16px">
-                <div style="font-size:10.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Staged overrides · Apply writes to the server config</div>
+                <div style="font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Staged overrides · Apply writes to the server config</div>
                 <sc-for list="{{ cfgAdded }}" as="a" hint-placeholder-count="0">
                   <div class="ark-ov-row" style="display:flex;align-items:center;gap:13px;background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:12px 14px">
                     <div class="ark-ov-key" style="min-width:0;flex:1">
                       <div class="ark-unclip" style="font-size:12.5px;font-weight:600;font-family:'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.key }}</div>
-                      <div style="font-size:10.5px;color:var(--mute);margin-top:2px">[{{ a.sec }}] · {{ a.desc }}</div>
+                      <div style="font-size:11px;color:var(--mute);margin-top:2px">[{{ a.sec }}] · {{ a.desc }}</div>
                     </div>
                     <span style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace;flex:none">=</span>
                     <input value="{{ a.value }}" onChange="{{ a.onEdit }}" style="{{ a.inputStyle }}" />
@@ -809,7 +809,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
                       <sc-if value="{{ a.valid }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg>Valid</sc-if>
                       <sc-if value="{{ a.invalid }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5M12 16.5h.01"/><circle cx="12" cy="12" r="9"/></svg>Invalid</sc-if>
                     </span>
-                    <span class="ark-ov-msg" style="font-size:10.5px;color:{{ a.statusColor }};flex:none;width:190px">{{ a.msg }}</span>
+                    <span class="ark-ov-msg" style="font-size:11px;color:{{ a.statusColor }};flex:none;width:190px">{{ a.msg }}</span>
                     <button onClick="{{ a.apply }}" style="font-size:11px;font-weight:700;color:#0A0C10;background:var(--green);border:none;border-radius:7px;padding:6px 12px;cursor:pointer;flex:none" style-hover="filter:brightness(1.06)">Apply</button>
                     <button onClick="{{ a.remove }}" style="width:26px;height:26px;border-radius:6px;background:var(--surface2);border:1px solid var(--line);color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none" style-hover="color:var(--red)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 6 18 18M18 6 6 18"/></svg></button>
                   </div>
@@ -826,21 +826,21 @@ html,body{margin:0;padding:0;background:#0A0C10}
         <sc-if value="{{ stFiles }}" hint-placeholder-val="{{ true }}">
           <div class="ark-g1" style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
             <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px">
-              <div style="font-size:10.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:4px 8px 10px">{{ sel.name }} · config</div>
+              <div style="font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:4px 8px 10px">{{ sel.name }} · config</div>
               <div style="display:flex;flex-direction:column;gap:2px">
                 <sc-for list="{{ files }}" as="f" hint-placeholder-count="5">
-                  <div class="ark-taprow" style="{{ f.style }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.name }}</span><span style="font-size:10px;color:var(--faint)">{{ f.size }}</span></div>
+                  <div class="ark-taprow" style="{{ f.style }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.name }}</span><span style="font-size:11px;color:var(--mute)">{{ f.size }}</span></div>
                 </sc-for>
               </div>
             </div>
             <div style="background:#07090C;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column">
               <div style="display:flex;align-items:center;gap:10px;padding:11px 15px;border-bottom:1px solid var(--line);background:var(--card)">
                 <span style="font-size:12px;font-family:'JetBrains Mono',monospace;font-weight:600;flex:1">{{ cfgFileName }}</span>
-                <sc-if value="{{ cfgIsEmpty }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;color:var(--amber)">empty — type settings below</span></sc-if>
+                <sc-if value="{{ cfgIsEmpty }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:var(--amber)">empty — type settings below</span></sc-if>
                 <button onClick="{{ saveCfgRaw }}" style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:#0A0C10;background:var(--green);border:none;border-radius:7px;padding:6px 13px;cursor:pointer" style-hover="filter:brightness(1.06)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0A0C10" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7"/></svg>Save file</button>
               </div>
               <textarea value="{{ cfgDraft }}" onChange="{{ onCfgDraft }}" spellcheck="false" placeholder="[ServerSettings]&#10;KeyName=Value" class="ark-file" style="width:100%;min-height:440px;resize:vertical;background:#07090C;border:none;outline:none;color:#C7D3E3;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.75;padding:14px 16px"></textarea>
-              <div style="padding:9px 16px;border-top:1px solid var(--line);font-size:10.5px;color:var(--faint);line-height:1.5">Passwords shown as •••••• stay unchanged when you save. Most changes apply on the next server restart.</div>
+              <div style="padding:9px 16px;border-top:1px solid var(--line);font-size:11px;color:var(--mute);line-height:1.5">Passwords shown as •••••• stay unchanged when you save. Most changes apply on the next server restart.</div>
             </div>
           </div>
         </sc-if>
@@ -855,7 +855,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
                 <button onClick="{{ t.del }}" title="Remove task" style="width:30px;height:30px;border-radius:7px;background:var(--surface2);border:1px solid var(--line2);color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none" style-hover="color:var(--red)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6 18 18M18 6 6 18"/></svg></button>
               </div>
             </sc-for>
-            <div style="padding:11px 16px;font-size:11px;color:var(--faint)">Tasks run via arkadmin's crontab on the server.</div>
+            <div style="padding:11px 16px;font-size:11px;color:var(--mute)">Tasks run via arkadmin's crontab on the server.</div>
           </div>
         </sc-if>
 
@@ -863,10 +863,10 @@ html,body{margin:0;padding:0;background:#0A0C10}
         <sc-if value="{{ stAudit }}" hint-placeholder-val="{{ true }}">
           <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden">
             <div style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)"><span style="font-size:12.5px;font-weight:700;flex:1">Admin audit log</span><button onClick="{{ exportAudit }}" style="font-size:11.5px;font-weight:600;color:var(--dim);background:var(--surface2);border:1px solid var(--line2);border-radius:8px;padding:7px 12px;cursor:pointer" style-hover="color:var(--text)">Export CSV</button></div>
-            <div class="ark-thead" style="display:grid;grid-template-columns:112px minmax(0,2fr) minmax(0,1.2fr) 76px;gap:14px;padding:10px 16px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:600"><span>Actor</span><span>Command</span><span>Target</span><span>When</span></div>
+            <div class="ark-thead" style="display:grid;grid-template-columns:112px minmax(0,2fr) minmax(0,1.2fr) 76px;gap:14px;padding:10px 16px;border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);font-weight:600"><span>Actor</span><span>Command</span><span>Target</span><span>When</span></div>
             <sc-for list="{{ audit }}" as="a" hint-placeholder-count="7">
               <div class="ark-au-row" style="display:grid;grid-template-columns:112px minmax(0,2fr) minmax(0,1.2fr) 76px;gap:14px;padding:12px 16px;border-bottom:1px solid rgba(33,41,54,.5);align-items:center">
-                <span class="ark-au-who" style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:{{ a.whoColor }};justify-self:start">{{ a.who }}</span>
+                <span class="ark-au-who" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:{{ a.whoColor }};justify-self:start">{{ a.who }}</span>
                 <span class="ark-au-cmd" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:{{ a.cmdColor }};min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.cmd }}</span>
                 <span class="ark-au-target" style="font-size:11.5px;color:var(--dim)">{{ a.target }}</span>
                 <span class="ark-au-ago" style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace">{{ a.ago }}</span>
@@ -889,21 +889,21 @@ html,body{margin:0;padding:0;background:#0A0C10}
         <div style="display:flex;align-items:center;gap:11px;padding:15px 18px;border-bottom:1px solid var(--line)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ember)" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.6-3.6"/></svg>
           <span style="flex:1;font-size:14px;color:var(--mute)">Type a command or search players, files, maps…<span style="display:inline-block;width:8px;height:15px;background:var(--ember);margin-left:4px;vertical-align:middle;animation:blink 1s step-end infinite"></span></span>
-          <span style="font-size:9.5px;color:var(--mute);border:1px solid var(--line2);border-radius:5px;padding:2px 6px;font-family:'JetBrains Mono',monospace">esc</span>
+          <span style="font-size:11px;color:var(--mute);border:1px solid var(--line2);border-radius:5px;padding:2px 6px;font-family:'JetBrains Mono',monospace">esc</span>
         </div>
         <div style="max-height:46vh;overflow:auto;padding:8px">
           <sc-for list="{{ paletteItems }}" as="p" hint-placeholder-count="12">
-            <sc-if value="{{ p.isHeader }}" hint-placeholder-val="{{ false }}"><div style="font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:700;padding:10px 12px 5px">{{ p.label }}</div></sc-if>
+            <sc-if value="{{ p.isHeader }}" hint-placeholder-val="{{ false }}"><div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);font-weight:700;padding:10px 12px 5px">{{ p.label }}</div></sc-if>
             <sc-if value="{{ p.isItem }}" hint-placeholder-val="{{ true }}">
               <button onClick="{{ p.go }}" style="display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border-radius:9px;border:none;background:transparent;color:var(--text);cursor:pointer;font:inherit;font-size:13px;text-align:left" style-hover="background:var(--surface2)">
                 <span style="color:var(--dim);display:flex">{{ p.icon }}</span>
                 <span style="flex:1">{{ p.label }}</span>
-                <span style="font-size:9.5px;color:var(--mute);border:1px solid var(--line);border-radius:5px;padding:2px 7px;font-family:'JetBrains Mono',monospace">{{ p.meta }}</span>
+                <span style="font-size:11px;color:var(--mute);border:1px solid var(--line);border-radius:5px;padding:2px 7px;font-family:'JetBrains Mono',monospace">{{ p.meta }}</span>
               </button>
             </sc-if>
           </sc-for>
         </div>
-        <div style="display:flex;gap:14px;padding:10px 18px;border-top:1px solid var(--line);font-size:10px;color:var(--mute);font-family:'JetBrains Mono',monospace"><span>↑↓ navigate</span><span>↵ run</span><span>esc close</span><span style="flex:1;text-align:right;color:var(--faint)">⌘K anywhere</span></div>
+        <div style="display:flex;gap:14px;padding:10px 18px;border-top:1px solid var(--line);font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace"><span>↑↓ navigate</span><span>↵ run</span><span>esc close</span><span style="flex:1;text-align:right;color:var(--mute)">⌘K anywhere</span></div>
       </div>
     </div>
   </sc-if>
@@ -936,11 +936,11 @@ html,body{margin:0;padding:0;background:#0A0C10}
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">Admin password</div><input value="{{ addMap.form.adminPassword }}" onChange="{{ addMap.setAdmin }}" placeholder="required" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none" /></div>
-            <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">Server password <span style="color:var(--faint)">(optional)</span></div><input value="{{ addMap.form.serverPassword }}" onChange="{{ addMap.setServer }}" placeholder="empty = public" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none" /></div>
+            <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">Server password <span style="color:var(--mute)">(optional)</span></div><input value="{{ addMap.form.serverPassword }}" onChange="{{ addMap.setServer }}" placeholder="empty = public" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none" /></div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">CPU cores <span style="color:var(--faint)">(optional)</span></div><input value="{{ addMap.form.cores }}" onChange="{{ addMap.setCores }}" placeholder="full VM" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none" /></div>
-            <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">RAM GB <span style="color:var(--faint)">(optional)</span></div><input value="{{ addMap.form.ramGB }}" onChange="{{ addMap.setRam }}" placeholder="full VM" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none" /></div>
+            <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">CPU cores <span style="color:var(--mute)">(optional)</span></div><input value="{{ addMap.form.cores }}" onChange="{{ addMap.setCores }}" placeholder="full VM" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none" /></div>
+            <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">RAM GB <span style="color:var(--mute)">(optional)</span></div><input value="{{ addMap.form.ramGB }}" onChange="{{ addMap.setRam }}" placeholder="full VM" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none" /></div>
           </div>
           <sc-if value="{{ addMap.hasError }}" hint-placeholder-val="{{ false }}">
             <div style="font-size:12px;color:var(--red);background:rgba(255,91,91,.1);border:1px solid rgba(255,91,91,.3);border-radius:8px;padding:9px 12px">{{ addMap.error }}</div>
@@ -970,14 +970,14 @@ html,body{margin:0;padding:0;background:#0A0C10}
           </div>
           <sc-if value="{{ newTask.isMultiplier }}" hint-placeholder-val="{{ false }}">
             <div>
-              <div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:8px">Add rates to this event — each at its own value (e.g. XP ×6 <span style="color:var(--faint)">and</span> Taming ×20)</div>
+              <div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:8px">Add rates to this event — each at its own value (e.g. XP ×6 <span style="color:var(--mute)">and</span> Taming ×20)</div>
               <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px">
                 <sc-for list="{{ newTask.ratePresets }}" as="rt" hint-placeholder-count="6"><button onClick="{{ rt.add }}" style="{{ rt.style }}">+ {{ rt.label }}</button></sc-for>
               </div>
-              <div style="font-size:10.5px;color:var(--faint);margin-bottom:6px;line-height:1.4">Not one of the buttons above? Type any ARK setting name and press <span style="color:var(--ember);font-weight:600">Add</span> — the file is chosen automatically for known settings.</div>
+              <div style="font-size:11px;color:var(--mute);margin-bottom:6px;line-height:1.4">Not one of the buttons above? Type any ARK setting name and press <span style="color:var(--ember);font-weight:600">Add</span> — the file is chosen automatically for known settings.</div>
               <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
                 <input value="{{ newTask.rateKeyValue }}" onChange="{{ newTask.setRateKey }}" placeholder="e.g. HarvestAmountMultiplier" style="flex:1;min-width:150px;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none" />
-                <span style="font-size:10.5px;color:var(--mute);white-space:nowrap">file:</span>
+                <span style="font-size:11px;color:var(--mute);white-space:nowrap">file:</span>
                 <button onClick="{{ newTask.setRateFileGus }}" title="GameUserSettings.ini — most settings live here" style="{{ newTask.gusStyle }}">GUS</button>
                 <button onClick="{{ newTask.setRateFileGame }}" title="Game.ini — breeding & dino-stat settings" style="{{ newTask.gameStyle }}">Game</button>
                 <button onClick="{{ newTask.addFromInput }}" style="font-size:12px;font-weight:700;color:#0A0C10;background:var(--ember);border:none;border-radius:8px;padding:8px 15px;cursor:pointer;white-space:nowrap">Add</button>
@@ -987,7 +987,7 @@ html,body{margin:0;padding:0;background:#0A0C10}
                   <sc-for list="{{ newTask.rateList }}" as="r" hint-placeholder-count="2">
                     <div style="display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:8px 11px">
                       <span style="flex:1;min-width:0;font-size:12px;font-family:'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.key }}</span>
-                      <span style="font-size:9.5px;color:var(--faint);border:1px solid var(--line2);border-radius:5px;padding:1px 6px;font-family:'JetBrains Mono',monospace">{{ r.file }}</span>
+                      <span style="font-size:11px;color:var(--mute);border:1px solid var(--line2);border-radius:5px;padding:1px 6px;font-family:'JetBrains Mono',monospace">{{ r.file }}</span>
                       <input value="{{ r.value }}" onChange="{{ r.setValue }}" style="{{ r.valInputStyle }}" /><span style="font-size:12px;color:var(--mute)">×</span>
                       <button onClick="{{ r.remove }}" title="Remove" style="width:24px;height:24px;border-radius:6px;background:var(--surface2);border:1px solid var(--line);color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:var(--red)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6 18 18M18 6 6 18"/></svg></button>
                     </div>
@@ -1038,9 +1038,9 @@ html,body{margin:0;padding:0;background:#0A0C10}
           <button onClick="{{ editWorld.close }}" style="width:30px;height:30px;border-radius:8px;background:var(--surface2);border:1px solid var(--line);color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="color:var(--text)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 6 18 18M18 6 6 18"/></svg></button>
         </div>
         <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
-          <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">Session name <span style="color:var(--faint)">· how the server shows in the list</span></div><input value="{{ editWorld.form.sessionName }}" onChange="{{ editWorld.setSession }}" placeholder="e.g. Haven - Extinction" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-size:12.5px;outline:none" /></div>
-          <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">Admin password <span style="color:var(--faint)">· leave blank to keep current</span></div><input value="{{ editWorld.form.adminPassword }}" onChange="{{ editWorld.setAdmin }}" placeholder="new admin password" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none" /></div>
-          <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">Join password <span style="color:var(--faint)">· leave blank to keep current</span></div><input value="{{ editWorld.form.serverPassword }}" onChange="{{ editWorld.setServer }}" placeholder="server join password (optional)" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none" /></div>
+          <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">Session name <span style="color:var(--mute)">· how the server shows in the list</span></div><input value="{{ editWorld.form.sessionName }}" onChange="{{ editWorld.setSession }}" placeholder="e.g. Haven - Extinction" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-size:12.5px;outline:none" /></div>
+          <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">Admin password <span style="color:var(--mute)">· leave blank to keep current</span></div><input value="{{ editWorld.form.adminPassword }}" onChange="{{ editWorld.setAdmin }}" placeholder="new admin password" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none" /></div>
+          <div><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">Join password <span style="color:var(--mute)">· leave blank to keep current</span></div><input value="{{ editWorld.form.serverPassword }}" onChange="{{ editWorld.setServer }}" placeholder="server join password (optional)" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;outline:none" /></div>
           <sc-if value="{{ editWorld.hasError }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:var(--red);background:rgba(255,91,91,.1);border:1px solid rgba(255,91,91,.3);border-radius:8px;padding:9px 12px">{{ editWorld.error }}</div></sc-if>
           <div style="display:flex;gap:10px">
             <button onClick="{{ editWorld.submit }}" style="flex:1;font-size:13px;font-weight:700;color:#0A0C10;background:linear-gradient(90deg,var(--ember),var(--ember2));border:none;border-radius:10px;padding:11px;cursor:pointer">Save changes</button>
@@ -1087,16 +1087,16 @@ html,body{margin:0;padding:0;background:#0A0C10}
           <sc-if value="{{ upd.isReady }}" hint-placeholder-val="{{ false }}">
             <div>
               <div style="display:flex;align-items:center;gap:16px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:15px 17px">
-                <div style="text-align:center"><div style="font-size:10px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em">Installed</div><div style="font-size:18px;font-weight:800;font-family:'JetBrains Mono',monospace;margin-top:2px">v{{ bldCur }}</div><div style="font-size:9.5px;color:var(--faint);font-family:'JetBrains Mono',monospace">build {{ bldCurB }}</div></div>
+                <div style="text-align:center"><div style="font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em">Installed</div><div style="font-size:18px;font-weight:800;font-family:'JetBrains Mono',monospace;margin-top:2px">v{{ bldCur }}</div><div style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace">build {{ bldCurB }}</div></div>
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12h14m0 0-5-5m5 5-5 5"/></svg>
-                <div style="text-align:center"><div style="font-size:10px;color:var(--blue);text-transform:uppercase;letter-spacing:.06em">Available</div><div style="font-size:18px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--blue);margin-top:2px">v{{ bldNext }}</div><div style="font-size:9.5px;color:var(--faint);font-family:'JetBrains Mono',monospace">build {{ bldNextB }}</div></div>
-                <div style="flex:1;text-align:right"><div style="font-size:10px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em">Download</div><div style="font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-top:2px">{{ bldSize }}</div></div>
+                <div style="text-align:center"><div style="font-size:11px;color:var(--blue);text-transform:uppercase;letter-spacing:.06em">Available</div><div style="font-size:18px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--blue);margin-top:2px">v{{ bldNext }}</div><div style="font-size:11px;color:var(--mute);font-family:'JetBrains Mono',monospace">build {{ bldNextB }}</div></div>
+                <div style="flex:1;text-align:right"><div style="font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em">Download</div><div style="font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-top:2px">{{ bldSize }}</div></div>
               </div>
 
-              <div style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin:16px 0 10px">Patch notes · v{{ bldNext }}</div>
+              <div style="font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin:16px 0 10px">Patch notes · v{{ bldNext }}</div>
               <div style="display:flex;flex-direction:column;gap:9px;max-height:150px;overflow:auto">
                 <sc-for list="{{ updNotes }}" as="n" hint-placeholder-count="5">
-                  <div style="display:flex;gap:9px;align-items:flex-start"><span style="font-size:9px;font-weight:700;color:{{ n.color }};border:1px solid {{ n.color }};border-radius:5px;padding:1px 5px;flex:none;font-family:'JetBrains Mono',monospace;min-width:34px;text-align:center">{{ n.label }}</span><span style="font-size:12px;color:var(--dim);line-height:1.5">{{ n.txt }}</span></div>
+                  <div style="display:flex;gap:9px;align-items:flex-start"><span style="font-size:11px;font-weight:700;color:{{ n.color }};border:1px solid {{ n.color }};border-radius:5px;padding:1px 5px;flex:none;font-family:'JetBrains Mono',monospace;min-width:34px;text-align:center">{{ n.label }}</span><span style="font-size:12px;color:var(--dim);line-height:1.5">{{ n.txt }}</span></div>
                 </sc-for>
               </div>
 
@@ -1201,10 +1201,10 @@ const STATUS = {
   running:{label:'Running',c:'#37D67A'},
   starting:{label:'Booting',c:'#FFB23E'},
   sleeping:{label:'Sleeping',c:'#5AA9FF'},
-  stopped:{label:'Stopped',c:'#6B7686'},
+  stopped:{label:'Stopped',c:'#6B7686',t:'#93A0B2'},
   crashed:{label:'Crashed',c:'#FF5B5B'},
-  unprovisioned:{label:'Not deployed',c:'#5C6979'},
-  unknown:{label:'Connecting…',c:'#5C6979'}
+  unprovisioned:{label:'Not deployed',c:'#5C6979',t:'#93A0B2'},
+  unknown:{label:'Connecting…',c:'#5C6979',t:'#93A0B2'}
 };
 function spark(arr,w,h){
   if(!arr||arr.length<2) return {line:'M0 '+h+' L'+w+' '+h, area:'M0 '+h+' L'+w+' '+h+' L'+w+' '+h+' L0 '+h+' Z', last:0};
@@ -1220,7 +1220,7 @@ function sparkF(arr,w,h){
   return {line, area:line+' L'+w+' '+h+' L0 '+h+' Z'};
 }
 const FEED_DOT = {join:'#37D67A',leave:'#6B7686',transfer:'#37D3C3',sys:'#5AA9FF'};
-const CTAG={sys:['SYS','#5C6979'],ok:['OK','#37D67A'],join:['JOIN','#37D67A'],leave:['LEFT','#6B7686'],chat:['CHAT','#37D3C3'],rcon:['RCON','#FF7A2E'],warn:['WARN','#FFB23E'],error:['ERR','#FF5B5B'],log:['LOG','#93A0B2']};
+const CTAG={sys:['SYS','#7F8C9E'],ok:['OK','#37D67A'],join:['JOIN','#37D67A'],leave:['LEFT','#7F8C9E'],chat:['CHAT','#37D3C3'],rcon:['RCON','#FF7A2E'],warn:['WARN','#FFB23E'],error:['ERR','#FF5B5B'],log:['LOG','#93A0B2']};
 const CFILTERS=[['all','All'],['chat','Chat'],['rcon','RCON'],['join','Joins'],['warn','Alerts']];
 const CMACROS=[{label:'Broadcast',cmd:'Broadcast Hello survivors!'},{label:'Save World',cmd:'SaveWorld'},{label:'List Players',cmd:'ListPlayers'},{label:'Get Time',cmd:'GetGameLog'},{label:'Destroy Wild Dinos',cmd:'DestroyWildDinos'},{label:'Get Chat',cmd:'GetChat'}];
 const MACROS = [{label:'Broadcast',cmd:'Broadcast Hello survivors!'},{label:'Save World',cmd:'SaveWorld'},{label:'List Players',cmd:'ListPlayers'},{label:'Get Chat',cmd:'GetChat'}];
@@ -1748,7 +1748,7 @@ class Component extends DCLogic {
         ver:m.ver||'ASA', mods:m.mods||0, hasUpd:false, bootLabel: starting?'starting…':'',
         emblemStyle:{width:'44px',height:'44px',borderRadius:'11px',flex:'none',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:'800',fontSize:'13px',letterSpacing:'.02em',background:m.emblem+'1f',color:m.emblem,border:'1px solid '+m.emblem+'44',fontFamily:'JetBrains Mono,monospace'},
         icon:mapIcon(m.map, m.emblem),
-        pillStyle:{display:'inline-flex',alignItems:'center',gap:'6px',flex:'none',fontSize:'11px',fontWeight:'700',padding:'4px 10px',borderRadius:'99px',color:sm.c,background:sm.c+'18',border:'1px solid '+sm.c+'3a'},
+        pillStyle:{display:'inline-flex',alignItems:'center',gap:'6px',flex:'none',fontSize:'11px',fontWeight:'700',padding:'4px 10px',borderRadius:'99px',color:sm.t||sm.c,background:sm.c+'18',border:'1px solid '+sm.c+'3a'},
         dotStyle:{width:'7px',height:'7px',borderRadius:'99px',background:sm.c, animation: starting?'pulse 1.2s infinite':'none'},
         gid:'sp-'+m.id, spColor: cpu>80?'#FF5B5B':(m.emblem==='#FF7A2E'?'#FF9E63':'var(--cyan)'), sparkLine:sp.line, sparkArea:sp.area,
         open:()=>this.sel(m.id), console:()=>this.openConsole(m.id), wake:()=>this.wake(m.id), restart:()=>this.instAction(m.id,'restart','Restart'), deploy:()=>this.openAddMap(),
@@ -1800,7 +1800,7 @@ class Component extends DCLogic {
       telemetry: (function(inst){
         const cap = inst.ramLimitGB!=null?inst.ramLimitGB:(inst.ramAlloc||16);
         const ramUse = inst.ramLiveGB!=null?inst.ramLiveGB:(inst.ramUsed!=null?inst.ramUsed:0);
-        const kS={fontSize:'9.5px',textTransform:'uppercase',letterSpacing:'.08em',color:'var(--mute)',fontWeight:600};
+        const kS={fontSize:'11px',textTransform:'uppercase',letterSpacing:'.08em',color:'var(--mute)',fontWeight:600};
         const vS=(c)=>({fontSize:'15px',fontWeight:700,fontFamily:'JetBrains Mono,monospace',color:c,lineHeight:'1.1'});
         const subS={fontSize:'11px',color:'var(--mute)',fontFamily:'JetBrains Mono,monospace'};
         return [
@@ -1948,7 +1948,7 @@ class Component extends DCLogic {
       cfgAddCustomGus:()=>this.cfgAddCustom('gus'), cfgAddCustomGame:()=>this.cfgAddCustom('game'),
       cfgAdded:(s.cfgAdded||[]).map(a=>{ const checking=a.status==='checking', valid=a.status==='valid', invalid=a.status==='invalid'; const c=valid?'#37D67A':(invalid?'#FF5B5B':'#FFB23E');
         return Object.assign({}, a, {checking, valid, invalid, statusColor:c, onEdit:(e)=>this.cfgEdit(a.key,e.target.value), remove:()=>this.cfgRemove(a.key), apply:()=>this.cfgApply(a),
-          badgeStyle:{display:'inline-flex',alignItems:'center',gap:'6px',fontSize:'10.5px',fontWeight:600,padding:'3px 9px',borderRadius:'6px',color:c,background:c+'18',border:'1px solid '+c+'33',whiteSpace:'nowrap'},
+          badgeStyle:{display:'inline-flex',alignItems:'center',gap:'6px',fontSize:'11px',fontWeight:600,padding:'3px 9px',borderRadius:'6px',color:c,background:c+'18',border:'1px solid '+c+'33',whiteSpace:'nowrap'},
           inputStyle:{width:'92px',background:'var(--bg2)',border:'1px solid '+(invalid?'#FF5B5B':'var(--line2)'),borderRadius:'7px',padding:'7px 9px',color:valid?'#A9E7C2':(invalid?'#FF9E9E':'var(--text)'),fontFamily:'JetBrains Mono,monospace',fontSize:'12px',outline:'none'}}); }),
       cfgCount:(s.cfgAdded||[]).length, cfgValidCount:(s.cfgAdded||[]).filter(a=>a.status==='valid').length,
       applyAllCfg:()=>{ (this.state.cfgAdded||[]).filter(a=>a.status==='valid').forEach(a=>this.cfgApply(a)); },
@@ -2018,7 +2018,7 @@ class Component extends DCLogic {
       // platformen stonden alle badges op ✓ omdat undefined !== false.
       crossPlatforms:[['PC','Steam'],['XSX','Xbox'],['PS5','PS5'],['WINGDK','Windows']].map(([tok,short])=>{ const on=_platKnown && effPlat[tok]!==false; return {name:short, short, on, unknown:!_platKnown, toggle:()=>this.togglePlatform(tok, effPlat),
         style:{fontSize:'11px',fontWeight:600,borderRadius:'7px',padding:'5px 11px',cursor:'pointer',border:'1px solid '+(on?'rgba(55,211,195,.35)':'var(--line2)'),background:on?'rgba(55,211,195,.12)':'var(--surface2)',color:on?'var(--cyan)':'var(--mute)'}, mark:on?'✓ ':(_platKnown?'':'? '),
-        miniStyle:{fontSize:'9.5px',fontFamily:'JetBrains Mono,monospace',borderRadius:'5px',padding:'1px 6px',border:'1px solid '+(on?'rgba(55,211,195,.3)':'var(--line2)'),background:on?'rgba(55,211,195,.1)':'var(--surface2)',color:on?'var(--cyan)':'var(--mute)',opacity:on?1:0.5}}; }),
+        miniStyle:{fontSize:'11px',fontFamily:'JetBrains Mono,monospace',borderRadius:'5px',padding:'1px 6px',border:'1px solid '+(on?'rgba(55,211,195,.3)':'var(--line2)'),background:on?'rgba(55,211,195,.1)':'var(--surface2)',color:on?'var(--cyan)':'var(--mute)',opacity:on?1:0.5}}; }),
       // game mode + rule toggles (optimistic apply)
       ruleModeIsPve: effMode==='PvE',
       setPvE:()=>this.setGameMode(true), setPvP:()=>this.setGameMode(false),

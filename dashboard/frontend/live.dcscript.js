@@ -55,10 +55,10 @@ const STATUS = {
   running:{label:'Running',c:'#37D67A'},
   starting:{label:'Booting',c:'#FFB23E'},
   sleeping:{label:'Sleeping',c:'#5AA9FF'},
-  stopped:{label:'Stopped',c:'#6B7686'},
+  stopped:{label:'Stopped',c:'#6B7686',t:'#93A0B2'},
   crashed:{label:'Crashed',c:'#FF5B5B'},
-  unprovisioned:{label:'Not deployed',c:'#5C6979'},
-  unknown:{label:'Connecting…',c:'#5C6979'}
+  unprovisioned:{label:'Not deployed',c:'#5C6979',t:'#93A0B2'},
+  unknown:{label:'Connecting…',c:'#5C6979',t:'#93A0B2'}
 };
 function spark(arr,w,h){
   if(!arr||arr.length<2) return {line:'M0 '+h+' L'+w+' '+h, area:'M0 '+h+' L'+w+' '+h+' L'+w+' '+h+' L0 '+h+' Z', last:0};
@@ -74,7 +74,7 @@ function sparkF(arr,w,h){
   return {line, area:line+' L'+w+' '+h+' L0 '+h+' Z'};
 }
 const FEED_DOT = {join:'#37D67A',leave:'#6B7686',transfer:'#37D3C3',sys:'#5AA9FF'};
-const CTAG={sys:['SYS','#5C6979'],ok:['OK','#37D67A'],join:['JOIN','#37D67A'],leave:['LEFT','#6B7686'],chat:['CHAT','#37D3C3'],rcon:['RCON','#FF7A2E'],warn:['WARN','#FFB23E'],error:['ERR','#FF5B5B'],log:['LOG','#93A0B2']};
+const CTAG={sys:['SYS','#7F8C9E'],ok:['OK','#37D67A'],join:['JOIN','#37D67A'],leave:['LEFT','#7F8C9E'],chat:['CHAT','#37D3C3'],rcon:['RCON','#FF7A2E'],warn:['WARN','#FFB23E'],error:['ERR','#FF5B5B'],log:['LOG','#93A0B2']};
 const CFILTERS=[['all','All'],['chat','Chat'],['rcon','RCON'],['join','Joins'],['warn','Alerts']];
 const CMACROS=[{label:'Broadcast',cmd:'Broadcast Hello survivors!'},{label:'Save World',cmd:'SaveWorld'},{label:'List Players',cmd:'ListPlayers'},{label:'Get Time',cmd:'GetGameLog'},{label:'Destroy Wild Dinos',cmd:'DestroyWildDinos'},{label:'Get Chat',cmd:'GetChat'}];
 const MACROS = [{label:'Broadcast',cmd:'Broadcast Hello survivors!'},{label:'Save World',cmd:'SaveWorld'},{label:'List Players',cmd:'ListPlayers'},{label:'Get Chat',cmd:'GetChat'}];
@@ -602,7 +602,7 @@ class Component extends DCLogic {
         ver:m.ver||'ASA', mods:m.mods||0, hasUpd:false, bootLabel: starting?'starting…':'',
         emblemStyle:{width:'44px',height:'44px',borderRadius:'11px',flex:'none',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:'800',fontSize:'13px',letterSpacing:'.02em',background:m.emblem+'1f',color:m.emblem,border:'1px solid '+m.emblem+'44',fontFamily:'JetBrains Mono,monospace'},
         icon:mapIcon(m.map, m.emblem),
-        pillStyle:{display:'inline-flex',alignItems:'center',gap:'6px',flex:'none',fontSize:'11px',fontWeight:'700',padding:'4px 10px',borderRadius:'99px',color:sm.c,background:sm.c+'18',border:'1px solid '+sm.c+'3a'},
+        pillStyle:{display:'inline-flex',alignItems:'center',gap:'6px',flex:'none',fontSize:'11px',fontWeight:'700',padding:'4px 10px',borderRadius:'99px',color:sm.t||sm.c,background:sm.c+'18',border:'1px solid '+sm.c+'3a'},
         dotStyle:{width:'7px',height:'7px',borderRadius:'99px',background:sm.c, animation: starting?'pulse 1.2s infinite':'none'},
         gid:'sp-'+m.id, spColor: cpu>80?'#FF5B5B':(m.emblem==='#FF7A2E'?'#FF9E63':'var(--cyan)'), sparkLine:sp.line, sparkArea:sp.area,
         open:()=>this.sel(m.id), console:()=>this.openConsole(m.id), wake:()=>this.wake(m.id), restart:()=>this.instAction(m.id,'restart','Restart'), deploy:()=>this.openAddMap(),
@@ -654,7 +654,7 @@ class Component extends DCLogic {
       telemetry: (function(inst){
         const cap = inst.ramLimitGB!=null?inst.ramLimitGB:(inst.ramAlloc||16);
         const ramUse = inst.ramLiveGB!=null?inst.ramLiveGB:(inst.ramUsed!=null?inst.ramUsed:0);
-        const kS={fontSize:'9.5px',textTransform:'uppercase',letterSpacing:'.08em',color:'var(--mute)',fontWeight:600};
+        const kS={fontSize:'11px',textTransform:'uppercase',letterSpacing:'.08em',color:'var(--mute)',fontWeight:600};
         const vS=(c)=>({fontSize:'15px',fontWeight:700,fontFamily:'JetBrains Mono,monospace',color:c,lineHeight:'1.1'});
         const subS={fontSize:'11px',color:'var(--mute)',fontFamily:'JetBrains Mono,monospace'};
         return [
@@ -802,7 +802,7 @@ class Component extends DCLogic {
       cfgAddCustomGus:()=>this.cfgAddCustom('gus'), cfgAddCustomGame:()=>this.cfgAddCustom('game'),
       cfgAdded:(s.cfgAdded||[]).map(a=>{ const checking=a.status==='checking', valid=a.status==='valid', invalid=a.status==='invalid'; const c=valid?'#37D67A':(invalid?'#FF5B5B':'#FFB23E');
         return Object.assign({}, a, {checking, valid, invalid, statusColor:c, onEdit:(e)=>this.cfgEdit(a.key,e.target.value), remove:()=>this.cfgRemove(a.key), apply:()=>this.cfgApply(a),
-          badgeStyle:{display:'inline-flex',alignItems:'center',gap:'6px',fontSize:'10.5px',fontWeight:600,padding:'3px 9px',borderRadius:'6px',color:c,background:c+'18',border:'1px solid '+c+'33',whiteSpace:'nowrap'},
+          badgeStyle:{display:'inline-flex',alignItems:'center',gap:'6px',fontSize:'11px',fontWeight:600,padding:'3px 9px',borderRadius:'6px',color:c,background:c+'18',border:'1px solid '+c+'33',whiteSpace:'nowrap'},
           inputStyle:{width:'92px',background:'var(--bg2)',border:'1px solid '+(invalid?'#FF5B5B':'var(--line2)'),borderRadius:'7px',padding:'7px 9px',color:valid?'#A9E7C2':(invalid?'#FF9E9E':'var(--text)'),fontFamily:'JetBrains Mono,monospace',fontSize:'12px',outline:'none'}}); }),
       cfgCount:(s.cfgAdded||[]).length, cfgValidCount:(s.cfgAdded||[]).filter(a=>a.status==='valid').length,
       applyAllCfg:()=>{ (this.state.cfgAdded||[]).filter(a=>a.status==='valid').forEach(a=>this.cfgApply(a)); },
@@ -872,7 +872,7 @@ class Component extends DCLogic {
       // platformen stonden alle badges op ✓ omdat undefined !== false.
       crossPlatforms:[['PC','Steam'],['XSX','Xbox'],['PS5','PS5'],['WINGDK','Windows']].map(([tok,short])=>{ const on=_platKnown && effPlat[tok]!==false; return {name:short, short, on, unknown:!_platKnown, toggle:()=>this.togglePlatform(tok, effPlat),
         style:{fontSize:'11px',fontWeight:600,borderRadius:'7px',padding:'5px 11px',cursor:'pointer',border:'1px solid '+(on?'rgba(55,211,195,.35)':'var(--line2)'),background:on?'rgba(55,211,195,.12)':'var(--surface2)',color:on?'var(--cyan)':'var(--mute)'}, mark:on?'✓ ':(_platKnown?'':'? '),
-        miniStyle:{fontSize:'9.5px',fontFamily:'JetBrains Mono,monospace',borderRadius:'5px',padding:'1px 6px',border:'1px solid '+(on?'rgba(55,211,195,.3)':'var(--line2)'),background:on?'rgba(55,211,195,.1)':'var(--surface2)',color:on?'var(--cyan)':'var(--mute)',opacity:on?1:0.5}}; }),
+        miniStyle:{fontSize:'11px',fontFamily:'JetBrains Mono,monospace',borderRadius:'5px',padding:'1px 6px',border:'1px solid '+(on?'rgba(55,211,195,.3)':'var(--line2)'),background:on?'rgba(55,211,195,.1)':'var(--surface2)',color:on?'var(--cyan)':'var(--mute)',opacity:on?1:0.5}}; }),
       // game mode + rule toggles (optimistic apply)
       ruleModeIsPve: effMode==='PvE',
       setPvE:()=>this.setGameMode(true), setPvP:()=>this.setGameMode(false),

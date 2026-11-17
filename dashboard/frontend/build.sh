@@ -19,7 +19,7 @@ cat > index.html <<'HEAD'
   /* Hide the design template until the app mounts; show a clean loader meanwhile. */
   x-dc{display:none!important}
   html,body{background:#0A0C10}
-  #dc-boot{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#0A0C10;color:#5C6979;font-family:Archivo,system-ui,sans-serif}
+  #dc-boot{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#0A0C10;color:#7F8C9E;font-family:Archivo,system-ui,sans-serif}
   #dc-boot.hide{display:none}
   #dc-boot .spin{width:26px;height:26px;border-radius:50%;border:3px solid #212936;border-top-color:#FF7A2E;animation:dcspin .8s linear infinite}
   @keyframes dcspin{to{transform:rotate(360deg)}}
